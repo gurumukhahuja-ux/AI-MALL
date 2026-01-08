@@ -123,6 +123,8 @@ const LiveDemoPage = () => {
     const [agentId, setAgentId] = useState("");
     const subToggle = useRecoilValue(toggleState);
 
+    const [selectedDemo, setSelectedDemo] = useState(null);
+
     const categories = [
         'all',
         "Business OS",
@@ -149,7 +151,12 @@ const LiveDemoPage = () => {
             <AnimatePresence>
                 {subToggle.subscripPgTgl && <SubscriptionForm id={agentId} />}
             </AnimatePresence>
-            <LiveDemoModal onSubscribe={handleSubscribe} />
+
+            <LiveDemoModal
+                demo={selectedDemo}
+                onClose={() => setSelectedDemo(null)}
+                onSubscribe={handleSubscribe}
+            />
 
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
@@ -199,6 +206,7 @@ const LiveDemoPage = () => {
                             key={demo._id}
                             agent={demo}
                             onSubscribe={handleSubscribe}
+                            onWatch={(d) => setSelectedDemo(d)}
                         />
                     ))
                 ) : (
