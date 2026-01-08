@@ -1,10 +1,7 @@
 import React from 'react';
-import { ArrowRight } from 'lucide-react';
-import { useNavigate } from 'react-router';
-import { AppRoute } from '../../types';
+import { ArrowRight, Link } from 'lucide-react';
 
 const CTA = () => {
-    const navigate = useNavigate();
 
     return (
         <section className="py-24 relative overflow-hidden flex justify-center items-center">
@@ -23,11 +20,10 @@ const CTA = () => {
                         Join thousands of developers and companies building the future with AI-MALL's intelligent agent marketplace.
                     </p>
 
-                    <button
-                        onClick={() => navigate(AppRoute.MARKETPLACE)}
+                    <a href='https://ai-mall.onrender.com'
                         className="px-12 py-5 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-full font-bold text-lg shadow-[0_15px_30px_rgba(59,130,246,0.4)] hover:shadow-[0_25px_40px_rgba(59,130,246,0.3)] hover:-translate-y-1 hover:scale-105 transition-all duration-300 flex items-center gap-3">
                         Get Started Now <ArrowRight size={22} />
-                    </button>
+                    </a>
 
                 </div>
             </div>
