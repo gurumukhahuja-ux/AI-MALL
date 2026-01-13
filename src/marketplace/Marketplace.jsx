@@ -135,7 +135,7 @@ const Marketplace = () => {
         const subject = helpForm.subject;
         const message = helpForm.message;
         try {
-            await axios.post('http://localhost:5000/api/support', {
+            await axios.post('http://localhost:8080/api/support', {
                 email: user?.email || 'guest@ai-mall.in',
                 senderName: user?.name || 'Guest User',
                 issueType: 'UserSupport',
@@ -156,30 +156,21 @@ const Marketplace = () => {
 
     // Strict Filter: Only show Live + Approved agents.
     const filteredAgents = agents.filter(agent => {
-        // Allow mock agents (which might not have these exact fields or status 'Live' is hardcoded)
-        const isLive = !agent.status || agent.status === 'Live' || agent.status === 'active';
-        const isApproved = agent.reviewStatus === 'Approved';
-
-        // Always show mocks
-        if (agent._id.startsWith('mock-')) return true;
-
-        // Exclude agents without an owner (System/Platform agents usually don't have one if seeded)
-        if (!agent.owner) return false;
-
         // Exclude A-Series Agents (Official)
         const aSeriesNames = [
             'AIBIZ', 'AIBASE', 'AICRAFT', 'AISA', 'AIBOTT',
             'AIGENE', 'AIBRAND', 'AISTREAM', 'AIOFFICE', 'AIDESK', 'AIFLOW'
         ];
 
-        // Debugging log to see what persists
-        // console.log("Checking Agent:", agent.agentName, "Owner:", agent.owner);
+        // Strict Requirement: Agent MUST have an owner (vendor or admin)
+        if (!agent.owner) return false;
+
+        // Strict Requirement: No mock agents
+        if (agent._id?.startsWith('mock-')) return false;
 
         if (aSeriesNames.includes(agent.agentName?.trim().toUpperCase()) || aSeriesNames.includes(agent.name?.trim().toUpperCase())) {
             return false;
         }
-
-        // if (!isLive || !isApproved) return false;
 
         const matchesCategory = filter === 'all' || agent.category === filter;
         const matchesSearch = (agent.agentName || agent.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -189,10 +180,11 @@ const Marketplace = () => {
 
     const categories = ['all', "Business OS", "Data & Intelligence", "Sales & Marketing", "HR & Finance", "Design & Creative", "Medical & Health AI"];
     // Exclude A-Series from Top Trending too
+    // Exclude A-Series from Top Trending
     const topUsedAgents = agents.filter(a => ![
         'AIBIZ', 'AIBASE', 'AICRAFT', 'AISA', 'AIBOTT',
         'AIGENE', 'AIBRAND', 'AISTREAM', 'AIOFFICE', 'AIDESK', 'AIFLOW'
-    ].includes(a.agentName?.trim().toUpperCase())).slice(0, 3);
+    ].includes(a.agentName?.trim().toUpperCase() || a.name?.trim().toUpperCase())).slice(0, 3);
 
     // --- ANIMATION VARIANTS ---
     const containerVariants = {
@@ -334,12 +326,10 @@ const Marketplace = () => {
 
                             {/* <div className="flex items-center gap-4 pt-4">
                                 <a
-                                    href="/dashboard/series"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
+                                    href="/dashboard/marketplace"
                                     className="px-10 py-4 bg-gray-900 text-white rounded-full font-bold text-xs tracking-widest uppercase hover:bg-black transition-all shadow-[0_10px_30px_-10px_rgba(0,0,0,0.3)] hover:shadow-[0_20px_40px_-10px_rgba(124,58,237,0.4)] hover:scale-105 active:scale-95 flex items-center gap-2 group/btn border border-gray-800"
                                 >
-                                    Explore A-Series <ChevronRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform text-purple-300" />
+                                    Explore AI-MALL <ChevronRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform text-purple-300" />
                                 </a>
                             </div> */}
                         </div>

@@ -3,6 +3,7 @@ import axios from "axios";
 import { API } from "../types";
 
 // Create axios instance with default config
+console.log("ANTIGRAVITY_HMR_CHECK: API URL is", API);
 const apiClient = axios.create({
   baseURL: API,
   headers: {
@@ -94,6 +95,27 @@ export const apiService = {
     }
   },
 
+  // --- Profile ---
+  async getUserProfile() {
+    try {
+      const response = await apiClient.get('/user/profile');
+      return response.data;
+    } catch (error) {
+      console.warn("Failed to fetch profile:", error);
+      throw error;
+    }
+  },
+
+  async updateUserProfile(data) {
+    try {
+      const response = await apiClient.put('/user/profile', data);
+      return response.data;
+    } catch (error) {
+      console.warn("Failed to update profile:", error);
+      throw error;
+    }
+  },
+
   // --- Dashboard Stats ---
   async getDashboardStats() {
     try {
@@ -115,23 +137,48 @@ export const apiService = {
       const response = await apiClient.get('/admin/stats');
       return response.data;
     } catch (error) {
-      console.warn('Backend admin stats failed, falling back to mock:', error.message);
-      const agents = JSON.parse(localStorage.getItem('mock_agents') || '[]');
-      return {
-        totalUsers: 0,
-        activeAgents: agents.length,
-        pendingApprovals: 0,
-        totalRevenue: 0,
-        openComplaints: 0,
-        recentActivity: [],
-        inventory: agents.map(a => ({
-          ...a,
-          id: a._id,
-          name: a.name || a.agentName,
-          pricing: a.pricing || 'Free',
-          status: a.status || 'Active'
-        }))
-      };
+      console.error('Backend admin stats failed:', error.message);
+      throw error;
+    }
+  },
+
+  async getAdminUserStats() {
+    try {
+      const response = await apiClient.get('/admin/stats/users');
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch user stats:', error);
+      return { total: 0, active: 0 };
+    }
+  },
+
+  async getAdminVendorStats() {
+    try {
+      const response = await apiClient.get('/admin/stats/vendors');
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch vendor stats:', error);
+      return { total: 0, approved: 0, pending: 0 };
+    }
+  },
+
+  async getAdminAgentStats() {
+    try {
+      const response = await apiClient.get('/admin/stats/agents');
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch agent stats:', error);
+      return { total: 0, active: 0, archive: 0 };
+    }
+  },
+
+  async getAdminRevenueStats() {
+    try {
+      const response = await apiClient.get('/admin/stats/revenue');
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch revenue stats:', error);
+      return { totalRevenue: 0, platformFees: 0, vendorPayouts: 0 };
     }
   },
 
@@ -141,10 +188,8 @@ export const apiService = {
       const response = await apiClient.get('/agents/created-by-me');
       return response.data;
     } catch (error) {
-      // Mock fallback: Return all local mock agents (assuming I am the owner in demo)
-      const stored = localStorage.getItem('mock_agents');
-      if (stored) return JSON.parse(stored);
-      return [];
+      console.error("Failed to fetch created agents:", error);
+      throw error;
     }
   },
 
@@ -153,20 +198,8 @@ export const apiService = {
       const response = await apiClient.get('/agents');
       return response.data;
     } catch (error) {
-      const stored = localStorage.getItem('mock_agents');
-      if (stored) return JSON.parse(stored);
-
-      const defaults = [
-        { _id: '683d38ce-1', name: 'AIFLOW', description: 'Streamline your AI workflows.', pricing: 'Free', status: 'Inactive' },
-        { _id: '683d38ce-2', name: 'AIMARKET', description: 'AI-driven marketplace insights.', pricing: 'Free', status: 'Inactive' },
-        { _id: '683d38ce-3', name: 'AICONNECT', description: 'Connect all your AI tools.', pricing: 'Free', status: 'Inactive' },
-        { _id: '693d38ce-4', name: 'AIMUSIC', description: 'AI-powered music generation.', pricing: 'Free', status: 'Inactive' },
-        { _id: '693d38ce-5', name: 'AITRANS', description: 'Advanced AI translation services.', pricing: 'Free', status: 'Inactive' },
-        { _id: '683d38ce-6', name: 'AISCRIPT', description: 'AI script writing and automation.', pricing: 'Free', status: 'Inactive' }
-      ];
-
-      localStorage.setItem('mock_agents', JSON.stringify(defaults));
-      return defaults;
+      console.error("Failed to fetch agents:", error);
+      throw error;
     }
   },
 
@@ -175,11 +208,8 @@ export const apiService = {
       const response = await apiClient.post('/agents', agentData);
       return response.data;
     } catch (error) {
-      const stored = JSON.parse(localStorage.getItem('mock_agents') || '[]');
-      const newAgent = { ...agentData, _id: Date.now().toString() };
-      stored.push(newAgent);
-      localStorage.setItem('mock_agents', JSON.stringify(stored));
-      return newAgent;
+      console.error("Failed to create agent:", error);
+      throw error;
     }
   },
 
@@ -188,15 +218,8 @@ export const apiService = {
       const response = await apiClient.put(`/agents/${id}`, updates);
       return response.data;
     } catch (error) {
-      const stored = JSON.parse(localStorage.getItem('mock_agents') || '[]');
-      const index = stored.findIndex(a => a._id === id);
-
-      if (index !== -1) {
-        stored[index] = { ...stored[index], ...updates };
-        localStorage.setItem('mock_agents', JSON.stringify(stored));
-        return stored[index];
-      }
-      return null;
+      console.error("Failed to update agent:", error);
+      throw error;
     }
   },
 
@@ -205,10 +228,8 @@ export const apiService = {
       await apiClient.delete(`/agents/${id}`);
       return true;
     } catch (error) {
-      const stored = JSON.parse(localStorage.getItem('mock_agents') || '[]');
-      const filtered = stored.filter(a => a._id !== id);
-      localStorage.setItem('mock_agents', JSON.stringify(filtered));
-      return true;
+      console.error("Failed to delete agent:", error);
+      throw error;
     }
   },
 
@@ -239,6 +260,26 @@ export const apiService = {
       return response.data;
     } catch (error) {
       console.error("Failed to reject agent:", error);
+      throw error;
+    }
+  },
+
+  async approveDeletion(id) {
+    try {
+      const response = await apiClient.post(`/agents/admin/approve-deletion/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error("Failed to approve deletion:", error);
+      throw error;
+    }
+  },
+
+  async rejectDeletion(id, reason) {
+    try {
+      const response = await apiClient.post(`/agents/admin/reject-deletion/${id}`, { reason });
+      return response.data;
+    } catch (error) {
+      console.error("Failed to reject deletion:", error);
       throw error;
     }
   },
@@ -396,6 +437,36 @@ export const apiService = {
     }
   },
 
+  async updateMaintenanceMode(enabled) {
+    try {
+      const response = await apiClient.post('/admin/settings/maintenance', { enabled });
+      return response.data;
+    } catch (error) {
+      console.error("Failed to update maintenance mode:", error);
+      throw error;
+    }
+  },
+
+  async updateKillSwitch(enabled) {
+    try {
+      const response = await apiClient.post('/admin/settings/killswitch', { enabled });
+      return response.data;
+    } catch (error) {
+      console.error("Failed to update kill switch:", error);
+      throw error;
+    }
+  },
+
+  async updateRateLimit(limit) {
+    try {
+      const response = await apiClient.post('/admin/settings/ratelimit', { limit });
+      return response.data;
+    } catch (error) {
+      console.error("Failed to update rate limit:", error);
+      throw error;
+    }
+  },
+
   async getAllUsers() {
     try {
       const response = await apiClient.get('/user/all');
@@ -430,6 +501,26 @@ export const apiService = {
     }
   },
 
+  async getAdminTeam() {
+    try {
+      const response = await apiClient.get('/user/admin-team');
+      return response.data;
+    } catch (error) {
+      console.error("Failed to fetch admin team:", error);
+      return [];
+    }
+  },
+
+  async addAdmin(email) {
+    try {
+      const response = await apiClient.post('/user/add-admin', { email });
+      return response.data;
+    } catch (error) {
+      console.error("Failed to add admin:", error);
+      throw error;
+    }
+  },
+
   // --- Reports ---
   async submitReport(reportData) {
     try {
@@ -452,6 +543,16 @@ export const apiService = {
     }
   },
 
+  async getMyReports() {
+    try {
+      const response = await apiClient.get('/reports/me');
+      return response.data;
+    } catch (error) {
+      console.error("Failed to fetch my reports:", error);
+      return [];
+    }
+  },
+
   async resolveReport(id, status, resolutionNote) {
     try {
       const response = await apiClient.put(`/reports/${id}/resolve`, { status, resolutionNote });
@@ -462,12 +563,120 @@ export const apiService = {
     }
   },
 
+  // --- Support Tickets ---
+  async submitSupportTicket(ticketData) {
+    try {
+      const response = await apiClient.post('/support', ticketData);
+      return response.data;
+    } catch (error) {
+      console.error("Failed to submit support ticket:", error);
+      throw error;
+    }
+  },
+
+  async getUserSupportTickets(userId) {
+    try {
+      const response = await apiClient.get(`/support/user/${userId}`);
+      return response.data;
+    } catch (error) {
+      console.error("Failed to fetch user support tickets:", error);
+      return [];
+    }
+  },
+
+  async replyToSupportTicket(ticketId, message, sender, senderId = null) {
+    try {
+      const response = await apiClient.post(`/support/${ticketId}/reply`, { message, sender, senderId });
+      return response.data;
+    } catch (error) {
+      console.error("Failed to replying to support ticket:", error);
+      throw error;
+    }
+  },
+
+  // --- Support Chat ---
+  async getMySupportChat(chatType = 'user_support') {
+    try {
+      const response = await apiClient.get(`/support-chat/my-chat?chatType=${chatType}`);
+      return response.data;
+    } catch (error) {
+      console.error("Failed to fetch support chat:", error);
+      return null;
+    }
+  },
+
+  async sendSupportChatMessage(chatId, text) {
+    try {
+      const response = await apiClient.post(`/support-chat/${chatId}/message`, { text });
+      return response.data;
+    } catch (error) {
+      console.error("Failed to send support chat message:", error);
+      throw error;
+    }
+  },
+
+  async getAdminActiveChats() {
+    try {
+      const response = await apiClient.get('/support-chat/admin/active');
+      console.log("[apiService] getAdminActiveChats Success:", response.data.length, "chats");
+      return response.data;
+    } catch (error) {
+      console.error("[apiService] getAdminActiveChats Error:", error.response?.status, error.message);
+      if (error.response?.data) {
+        console.error("[apiService] Error details:", error.response.data);
+      }
+      throw error;
+    }
+  },
+
   async replyToVendorTicket(ticketId, message) {
     try {
       const response = await apiClient.post(`/reports/${ticketId}/reply`, { message });
       return response.data;
     } catch (error) {
       console.error("Failed to send reply:", error);
+      throw error;
+    }
+  },
+
+  // Vendor Chat APIs
+  async getMyVendorChats() {
+    try {
+      const response = await apiClient.get('/vendor-chat/my-chats');
+      return response.data;
+    } catch (error) {
+      console.error("Failed to fetch vendor chats:", error);
+      throw error;
+    }
+  },
+
+  async getVendorActiveChats() {
+    try {
+      const response = await apiClient.get('/vendor-chat/vendor/active');
+      console.log("[apiService] getVendorActiveChats Success:", response.data.length, "chats");
+      return response.data;
+    } catch (error) {
+      console.error("[apiService] getVendorActiveChats Error:", error.response?.status, error.message);
+      throw error;
+    }
+  },
+
+  async sendVendorMessage({ vendorId, agentId, text }) {
+    try {
+      const response = await apiClient.post('/vendor-chat/message', { vendorId, agentId, text });
+      return response.data;
+    } catch (error) {
+      console.error("Failed to send vendor message:", error);
+      throw error;
+    }
+  },
+
+  async sendVendorChatMessage(chatId, text) {
+    try {
+      const response = await apiClient.post(`/vendor-chat/${chatId}/message`, { text });
+      return response.data;
+    } catch (error) {
+      console.error("Failed to send vendor chat message:", error);
       throw error;
     }
   },
@@ -508,6 +717,16 @@ export const apiService = {
       return response.data;
     } catch (error) {
       console.error("Failed to reply:", error);
+      throw error;
+    }
+  },
+
+  async adminDirectMessage(data) {
+    try {
+      const response = await apiClient.post('/messages/admin-direct', data);
+      return response.data;
+    } catch (error) {
+      console.error("Failed to send admin direct message:", error);
       throw error;
     }
   },

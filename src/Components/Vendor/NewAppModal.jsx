@@ -189,7 +189,7 @@ const NewAppModal = ({ isOpen, onClose, onAppCreated }) => {
                 pricingConfig: pricingConfig
             };
 
-            const response = await axios.post('http://localhost:5000/api/agents', payload, {
+            const response = await axios.post('http://localhost:8080/api/agents', payload, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'

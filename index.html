@@ -10,6 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <script>
     tailwind.config = {
+      darkMode: 'class',
       theme: {
         extend: {
           fontFamily: {
@@ -40,6 +41,14 @@
       /* Enables opacity utils like bg-primary/10 */
       --surface-color: #f8f9fc;
       --border-color: #eef2f6;
+    }
+
+    html.dark {
+        --secondary-color: #0f172a; /* slate-900 */
+        --text-color: #f8fafc; /* slate-50 */
+        --sub-text-color: #94a3b8; /* slate-400 */
+        --surface-color: #1e293b; /* slate-800 */
+        --border-color: #334155; /* slate-700 */
     }
 
     body {

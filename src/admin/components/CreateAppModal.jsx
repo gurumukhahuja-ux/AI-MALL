@@ -57,7 +57,7 @@ const CreateAppModal = ({ isOpen, onClose, onSubmit }) => {
                             </div>
                             <div>
                                 <h2 className="text-xl font-black text-gray-900 tracking-tight">Create New Agent</h2>
-                                <p className="text-gray-500 font-medium mt-0.5 text-xs">Deploy a new AI agent to the marketplace</p>
+                                <p className="text-gray-500 font-medium mt-0.5 text-xs">Deploy a new AI agent to the AI-MALL marketplace</p>
                             </div>
                         </div>
                         <button

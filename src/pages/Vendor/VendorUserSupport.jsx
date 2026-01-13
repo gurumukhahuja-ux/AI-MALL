@@ -57,7 +57,7 @@ const VendorUserSupport = () => {
             // Let's stick to axios for this single call OR assume I can edit apiService.
             // Wait, I can't edit apiService in the middle of this Replace.
             // I'll leave the axios call BUT fix the URL to use API constant or relative path.
-            await axios.patch(`http://localhost:5000/api/messages/${messageId}/status`, { status });
+            await axios.patch(`http://localhost:8080/api/messages/${messageId}/status`, { status });
             fetchMessages();
         } catch (error) {
             console.error("Failed to update status", error);

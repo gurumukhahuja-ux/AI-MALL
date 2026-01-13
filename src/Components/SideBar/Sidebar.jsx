@@ -23,6 +23,7 @@ import { useRecoilState } from 'recoil';
 import { clearUser, getUserData, toggleState, userData, notificationState } from '../../userStore/userData';
 import { useLanguage } from '../../context/LanguageContext';
 import axios from 'axios';
+import apiService from '../../services/apiService';
 
 const Sidebar = ({ isOpen, onClose }) => {
   const { t } = useLanguage();
@@ -60,17 +61,20 @@ const Sidebar = ({ isOpen, onClose }) => {
     setSendStatus(null);
 
     try {
-      await axios.post(apis.support, {
-        email: user?.email || "guest@ai-mall.in",
-        issueType,
-        message: issueText,
-        userId: user?.id || null
-      });
+      // 1. Get or Create Support Chat Session
+      const chatType = userRole === 'vendor' ? 'vendor_support' : 'user_support';
+      const chat = await apiService.getMySupportChat(chatType);
+      if (!chat?._id) throw new Error("Could not initialize support session");
+
+      // 2. Format and Send the message
+      const fullMessage = `[Issue: ${issueType}] ${issueText}`;
+      await apiService.sendSupportChatMessage(chat._id, fullMessage);
+
       setSendStatus('success');
       setIssueText("");
       setTimeout(() => setSendStatus(null), 3000);
     } catch (error) {
-      console.error("Support submission failed", error);
+      console.error("Support chat integration failed", error);
       setSendStatus('error');
     } finally {
       setIsSending(false);
@@ -114,7 +118,7 @@ const Sidebar = ({ isOpen, onClose }) => {
 
     if (token) {
       fetchNotifications();
-      const interval = setInterval(fetchNotifications, 5 * 60 * 1000);
+      const interval = setInterval(fetchNotifications, 30 * 1000); // Poll every 30s
       return () => clearInterval(interval);
     }
   }, [token]);
@@ -126,14 +130,19 @@ const Sidebar = ({ isOpen, onClose }) => {
   }
 
   // Navigation items configuration
-  const navItems = [
-    { id: 'chat', icon: MessageSquare, label: t('chat'), route: '/dashboard/chat' },
-    { id: 'myAgents', icon: Bot, label: t('myAgents'), route: AppRoute.MY_AGENTS },
-    { id: 'marketplace', icon: ShoppingBag, label: t('marketplace'), route: AppRoute.MARKETPLACE, onClick: () => setNotifyTgl(prev => ({ ...prev, marketPlaceMode: 'AIMall' })) },
-    //{ id: 'vendor', icon: LayoutGrid, label: t('vendorDashboard'), route: '/vendor/overview' },
-    // { id: 'billing', icon: FileText, label: t('billing'), route: AppRoute.INVOICES },
-    //{ id: 'admin', icon: Settings, label: t('adminDashboard'), route: AppRoute.ADMIN },
+  const allNavItems = [
+    { id: 'chat', icon: MessageSquare, label: t('chat'), route: '/dashboard/chat', roles: ['user', 'admin', 'vendor'] },
+    { id: 'myAgents', icon: Bot, label: t('myAgents'), route: AppRoute.MY_AGENTS, roles: ['user', 'admin', 'vendor'] },
+    { id: 'marketplace', icon: ShoppingBag, label: t('marketplace'), route: AppRoute.MARKETPLACE, onClick: () => setNotifyTgl(prev => ({ ...prev, marketPlaceMode: 'AIMall' })), roles: ['user', 'admin', 'vendor'] },
+
+    { id: 'vendor', icon: LayoutGrid, label: t('vendorDashboard'), route: '/vendor/overview', roles: ['vendor', 'admin'] },
+    { id: 'admin', icon: Settings, label: t('adminDashboard'), route: AppRoute.ADMIN, roles: ['admin'] },
   ];
+
+  // Determine effective role
+  const userRole = (user.role === 'admin' || user.role === 'Admin') ? 'admin' : user.role;
+
+  const navItems = allNavItems.filter(item => item.roles.includes(userRole));
 
   const toggleSection = (section) => {
     setExpandedSection(expandedSection === section ? null : section);
@@ -193,7 +202,7 @@ const Sidebar = ({ isOpen, onClose }) => {
           <Link to="/" onClick={() => { setNotifyTgl(prev => ({ ...prev, marketPlaceMode: 'AIMall' })); onClose(); }} className="group">
             <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-[0_0_15px_rgba(236,72,153,0.5)] ring-2 ring-[#ec4899]/20 group-hover:rotate-12 transition-transform duration-500">
               <span className="text-2xl font-black text-[#9333ea]">
-                A
+                AI
               </span>
             </div>
           </Link>
@@ -470,7 +479,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                     disabled={isSending || !issueText.trim()}
                     className="btn-purple py-5 shadow-2xl disabled:opacity-50"
                   >
-                    {isSending ? 'Transmitting...' : 'Initialize Ticket'}
+                    {isSending ? 'Sending...' : 'Send Message'}
                   </button>
 
                   <p className="text-[10px] text-center font-black text-slate-400 uppercase tracking-widest mt-4">

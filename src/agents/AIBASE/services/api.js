@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Create axios instance with base URL
 const api = axios.create({
-    baseURL: 'http://localhost:5000/api/aibase', // Backend URL for AIBASE agent
+    baseURL: 'http://localhost:8080/api/aibase', // Backend URL for AIBASE agent
     headers: {
         'Content-Type': 'application/json',
     },

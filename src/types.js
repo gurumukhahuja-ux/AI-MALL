@@ -56,6 +56,7 @@ export const AppRoute = {
   SECURITY: "/dashboard/security",
   ADMIN: "/dashboard/admin",
   PROFILE: "/dashboard/profile",
+  ADMIN_SUPPORT: "/dashboard/admin-support",
   VENDOR: "/vendor",
   VENDOR_REVENUE: "/vendor/revenue/overview",
   VENDOR_TRANSACTIONS: "/vendor/revenue/transactions",
@@ -66,15 +67,15 @@ export const AppRoute = {
 };
 
 // Use environment variable for API URL (configured in .env file)
-export const API = "https://ai-mall-backend.onrender.com/api";
-// export const API = "http://localhost:5000/api";
+// export const API = "https://ai-mall-backend.onrender.com/api";
+export const API = "http://localhost:8080/api";
 
 export const apis = {
   emailVerificationApi: `${API}/email_varification`,
   signUp: `${API}/auth/signup`,
-  logIn: `${API}/auth/login/`,
+  logIn: `${API}/auth/login`,
   forgotPassword: `${API}/auth/forgot-password`,
-  resetPassword: `${API}/auth/reset-password/`,
+  resetPassword: `${API}/auth/reset-password`,
   user: `${API}/user`,
   getPayments: `${API}/user/payments`,
   notifications: `${API}/notifications`,
@@ -85,5 +86,5 @@ export const apis = {
   chatAgent: `${API}/chat`,
   aibiz: `${API}/aibiz`,
   support: `${API}/support`,
-  BASE_URL: "http://localhost:5000",
+  BASE_URL: "http://localhost:8080",
 };

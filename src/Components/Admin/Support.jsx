@@ -1,183 +1,293 @@
-import React, { useState, useEffect } from 'react';
-import { BadgeCheck, AlertCircle, Clock, CheckCircle2, Search, Filter, MessageSquare, User, Loader2 } from 'lucide-react';
-import apiService from '../../services/apiService';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+    Send,
+    Search,
+    RefreshCw,
+    MessageSquare,
+    Eye,
+    Shield,
+    X
+} from 'lucide-react';
+import { useRecoilState } from 'recoil';
+import { userData } from '../../userStore/userData'; // Corrected path
+import apiService from '../../services/apiService'; // Corrected path
 
 const AdminSupport = () => {
-    const [reports, setReports] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [filter, setFilter] = useState('all'); // all, open, resolved
-    const [selectedReport, setSelectedReport] = useState(null);
-    const [resolutionNote, setResolutionNote] = useState('');
-    const [isResolving, setIsResolving] = useState(false);
+    const [currentUserData] = useRecoilState(userData);
+    const user = currentUserData?.user || { role: 'user' };
 
-    const fetchReports = async () => {
-        try {
-            const data = await apiService.getReports();
-            setReports(data);
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
-    };
+    // State
+    const [activeChat, setActiveChat] = useState(null);
+    const [chatsList, setChatsList] = useState([]);
+    const [messages, setMessages] = useState([]);
+    const [newMessage, setNewMessage] = useState("");
+    const [searchTerm, setSearchTerm] = useState("");
+    const [permissionError, setPermissionError] = useState(false);
 
+    const messagesEndRef = useRef(null);
+
+    // Initial Fetch & Polling
     useEffect(() => {
-        fetchReports();
+        let interval;
+
+        const fetchData = async () => {
+            await fetchAdminChats();
+        };
+
+        fetchData();
+        interval = setInterval(fetchData, 5000); // Poll every 5s
+
+        return () => clearInterval(interval);
     }, []);
 
-    const handleResolve = async (status) => {
-        if (!selectedReport) return;
-        setIsResolving(true);
+    // Scroll to bottom when messages change
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, [messages, activeChat]);
+
+    // --- API CALLS ---
+
+    const fetchAdminChats = async () => {
         try {
-            await apiService.resolveReport(selectedReport._id, status, resolutionNote);
-            await fetchReports();
-            setSelectedReport(null);
-            setResolutionNote('');
+            const data = await apiService.getAdminActiveChats();
+            setChatsList(Array.isArray(data) ? data : []);
+            setPermissionError(false);
+
+            // If we have an active chat selected, update its specific messages from the list
+            if (activeChat) {
+                const updatedChat = data.find(c => c._id === activeChat._id);
+                if (updatedChat) {
+                    setMessages(updatedChat.messages || []);
+                }
+            }
         } catch (err) {
-            alert("Failed to update report");
-        } finally {
-            setIsResolving(false);
+            console.error("Fetch Admin Chats Error:", err);
+            if (err.response?.status === 403) {
+                setPermissionError(true);
+            }
         }
     };
 
-    const filteredReports = reports.filter(r => {
-        if (filter === 'all') return true;
-        if (filter === 'open') return ['open', 'in-progress'].includes(r.status);
-        if (filter === 'resolved') return ['resolved', 'closed'].includes(r.status);
-        return true;
-    });
+    const handleSendMessage = async (e) => {
+        e.preventDefault();
+        if (!newMessage.trim()) return;
 
-    const getStatusColor = (status) => {
-        switch (status) {
-            case 'open': return 'bg-red-50 text-red-600 border-red-100';
-            case 'in-progress': return 'bg-amber-50 text-amber-600 border-amber-100';
-            case 'resolved': return 'bg-green-50 text-green-600 border-green-100';
-            default: return 'bg-slate-50 text-slate-500 border-slate-100';
+        const text = newMessage;
+        setNewMessage(""); // Optimistic clear
+
+        try {
+            if (!activeChat) return;
+            await apiService.sendSupportChatMessage(activeChat._id, text);
+            await fetchAdminChats(); // Refresh immediately
+            setActiveChat(null); // Close the reply modal
+        } catch (err) {
+            console.error("Failed to send", err);
+            alert("Failed to send message. Please try again.");
         }
     };
 
-    if (loading) return <div className="h-96 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
+    // Filter chats for admin
+    const filteredChats = chatsList.filter(c =>
+        c.userId?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        c.userId?.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    // --- RENDER ---
+
+    if (permissionError) {
+        return (
+            <div className="h-[80vh] flex flex-col items-center justify-center p-8 bg-white/60 backdrop-blur-3xl rounded-[40px] border border-white/60 shadow-2xl text-center">
+                <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mb-6 text-red-500 animate-pulse">
+                    <Shield size={40} />
+                </div>
+                <h2 className="text-2xl font-black text-slate-900 mb-2">Access Permissions Update Required</h2>
+                <p className="text-slate-500 max-w-md mb-8 font-medium">
+                    Your account capabilities have changed. Please refresh your secure session to access the Admin Console.
+                </p>
+                <button
+                    onClick={() => { localStorage.clear(); window.location.href = '/login'; }}
+                    className="bg-slate-900 hover:bg-slate-800 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest transition-all hover:scale-105 shadow-xl"
+                >
+                    Update Session (Log Out)
+                </button>
+            </div>
+        );
+    }
 
     return (
-        <div className="space-y-6 max-h-[calc(100vh-100px)] flex flex-col">
-            <div className="flex items-center justify-between shrink-0">
+        <div className="flex-1 h-full w-full relative overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="flex justify-between items-end mb-8 shrink-0">
                 <div>
                     <h2 className="text-2xl font-bold text-[#1E293B]">User Support</h2>
-                    <p className="text-subtext text-sm">Manage user complaints and inquiries</p>
+                    <p className="text-subtext text-sm">Manage user inquiries and support tickets</p>
                 </div>
-                <div className="flex gap-2">
-                    {['all', 'open', 'resolved'].map(f => (
-                        <button
-                            key={f}
-                            onClick={() => setFilter(f)}
-                            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${filter === f ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'bg-white text-subtext hover:bg-slate-50 border border-[#E0E4E8]'}`}
+            </div>
+
+            {/* Content Table */}
+            <div className="flex-1 bg-white rounded-[32px] shadow-sm border border-slate-100 overflow-hidden flex flex-col min-h-0">
+                <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 shrink-0">
+                    <div className="relative w-96">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                        <input
+                            type="text"
+                            placeholder="Search users or tickets..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full bg-white border border-slate-200 rounded-xl pl-10 pr-4 py-3 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 transition-all placeholder:font-medium"
+                        />
+                    </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto">
+                    <table className="w-full">
+                        <thead className="bg-slate-50 sticky top-0 z-10">
+                            <tr>
+                                <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">User</th>
+                                <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Type</th>
+                                <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Message Preview</th>
+                                <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</th>
+                                <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                                <th className="px-8 py-5 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {filteredChats.map((chat) => {
+                                const lastMsg = chat.messages?.[chat.messages.length - 1];
+                                return (
+                                    <tr key={chat._id} className="hover:bg-slate-50/50 transition-colors group">
+                                        <td className="px-8 py-5">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-sm">
+                                                    {chat.userId?.name?.charAt(0) || 'U'}
+                                                </div>
+                                                <div>
+                                                    <p className="font-bold text-slate-900 text-sm">{chat.userId?.name || 'Unknown User'}</p>
+                                                    <p className="text-xs text-slate-400 font-medium">{chat.userId?.email || 'No Email'}</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-8 py-5">
+                                            <span className="px-3 py-1 bg-purple-50 text-purple-600 rounded-lg text-[10px] font-black uppercase tracking-wider border border-purple-100">
+                                                UserSupport
+                                            </span>
+                                        </td>
+                                        <td className="px-8 py-5">
+                                            <p className="text-sm font-medium text-slate-600 max-w-[300px] truncate">
+                                                {lastMsg?.text || 'No messages'}
+                                            </p>
+                                        </td>
+                                        <td className="px-8 py-5">
+                                            <span className="text-xs font-bold text-slate-500">
+                                                {lastMsg ? new Date(lastMsg.timestamp).toLocaleDateString('en-US') : '-'}
+                                            </span>
+                                        </td>
+                                        <td className="px-8 py-5">
+                                            <span className="flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-600 rounded-full text-[10px] font-black uppercase tracking-wider w-fit border border-amber-100">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                                                Open
+                                            </span>
+                                        </td>
+                                        <td className="px-8 py-5 text-right">
+                                            <button
+                                                onClick={() => { setActiveChat(chat); setMessages(chat.messages || []); }}
+                                                className="p-2 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-indigo-600 hover:border-indigo-200 hover:shadow-md transition-all active:scale-95"
+                                            >
+                                                <MessageSquare size={16} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                            {filteredChats.length === 0 && (
+                                <tr>
+                                    <td colSpan="6" className="text-center py-20">
+                                        <div className="flex flex-col items-center opacity-40">
+                                            <MessageSquare size={48} className="text-slate-300 mb-4" />
+                                            <p className="font-black text-slate-400 uppercase tracking-widest">No Active Tickets</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* Reply Modal */}
+            <AnimatePresence>
+                {activeChat && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/20 backdrop-blur-sm">
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            className="bg-white rounded-[32px] shadow-2xl w-full max-w-2xl overflow-hidden border border-white/50"
                         >
-                            {f}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0">
-                {/* Reports List */}
-                <div className="lg:col-span-1 bg-white border border-[#E0E4E8] rounded-2xl overflow-hidden flex flex-col shadow-sm">
-                    <div className="p-4 border-b border-[#E0E4E8] bg-[#F8F9FB]">
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-subtext" />
-                            <input type="text" placeholder="Search reports..." className="w-full bg-white border border-[#E0E4E8] rounded-xl pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/10" />
-                        </div>
-                    </div>
-                    <div className="overflow-y-auto flex-1 p-2 space-y-2">
-                        {filteredReports.map(report => (
-                            <div
-                                key={report._id}
-                                onClick={() => setSelectedReport(report)}
-                                className={`p-4 rounded-xl cursor-pointer transition-all border ${selectedReport?._id === report._id ? 'bg-primary/5 border-primary/20 shadow-sm' : 'bg-white border-transparent hover:bg-[#F8F9FB]'}`}
-                            >
-                                <div className="flex justify-between items-start mb-2">
-                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${report.type === 'bug' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>{report.type}</span>
-                                    <span className="text-[10px] text-subtext">{new Date(report.timestamp).toLocaleDateString()}</span>
+                            <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                                        <MessageSquare size={20} />
+                                    </div>
+                                    <h2 className="text-xl font-black text-slate-900 tracking-tight">Reply to User</h2>
                                 </div>
-                                <h4 className="font-bold text-[#1E293B] text-sm line-clamp-1">{report.description}</h4>
-                                <div className="flex items-center gap-2 mt-2 text-xs text-subtext">
-                                    <User className="w-3 h-3" />
-                                    <span>{report.userId?.name || 'Unknown User'}</span>
-                                </div>
-                                <div className="mt-2 flex items-center justify-between">
-                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${getStatusColor(report.status)} uppercase`}>{report.status}</span>
-                                    {report.priority === 'high' && <AlertCircle className="w-4 h-4 text-red-500" />}
-                                </div>
+                                <button onClick={() => setActiveChat(null)} className="p-2 hover:bg-slate-200 rounded-full text-slate-400 transition-colors">
+                                    <X size={20} />
+                                </button>
                             </div>
-                        ))}
-                        {filteredReports.length === 0 && <div className="p-8 text-center text-subtext text-sm">No reports found</div>}
-                    </div>
-                </div>
 
-                {/* Report Details */}
-                <div className="lg:col-span-2 bg-white border border-[#E0E4E8] rounded-2xl p-8 flex flex-col shadow-sm overflow-y-auto">
-                    {selectedReport ? (
-                        <>
-                            <div className="flex justify-between items-start mb-6">
+                            <div className="p-8 space-y-8">
+                                <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100">
+                                    <div className="grid grid-cols-2 gap-8 mb-6">
+                                        <div className="overflow-hidden">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">User</p>
+                                            <p className="font-bold text-slate-900 truncate">{activeChat.userId?.name}</p>
+                                        </div>
+                                        <div className="overflow-hidden">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Contact</p>
+                                            <p className="font-bold text-slate-900 break-all">{activeChat.userId?.email}</p>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Latest Inquiry</p>
+                                        <p className="font-medium text-slate-700 leading-relaxed">
+                                            {activeChat.messages?.[activeChat.messages?.length - 1]?.text || "No message content"}
+                                        </p>
+                                    </div>
+                                </div>
+
                                 <div>
-                                    <div className="flex items-center gap-3 mb-2">
-                                        <h3 className="text-xl font-bold text-[#1E293B]">Report Details</h3>
-                                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${getStatusColor(selectedReport.status)}`}>{selectedReport.status}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2 text-sm text-subtext">
-                                        <Clock className="w-4 h-4" />
-                                        <span>Submitted on {new Date(selectedReport.timestamp).toLocaleString()}</span>
-                                    </div>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Response Message</p>
+                                    <textarea
+                                        value={newMessage}
+                                        onChange={(e) => setNewMessage(e.target.value)}
+                                        placeholder="Type your official response here..."
+                                        rows={4}
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 font-medium text-slate-900 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all resize-none"
+                                    />
                                 </div>
-                                <div className="text-right">
-                                    <p className="font-bold text-[#1E293B]">{selectedReport.userId?.name || 'Unknown User'}</p>
-                                    <p className="text-xs text-subtext">{selectedReport.userId?.email || 'No Email'}</p>
-                                </div>
-                            </div>
 
-                            <div className="bg-[#F8F9FB] rounded-xl p-6 mb-6 border border-[#E0E4E8]">
-                                <h4 className="text-xs font-bold text-subtext uppercase tracking-wider mb-2">Description</h4>
-                                <p className="text-[#1E293B] whitespace-pre-wrap leading-relaxed">{selectedReport.description}</p>
-                            </div>
-
-                            <div className="mt-auto pt-6 border-t border-[#E0E4E8]">
-                                <h4 className="text-sm font-bold text-[#1E293B] mb-3">Resolution Action</h4>
-                                <textarea
-                                    className="w-full bg-white border border-[#E0E4E8] rounded-xl p-4 text-sm focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none min-h-[100px] mb-4"
-                                    placeholder="Add notes about the resolution or response..."
-                                    value={resolutionNote}
-                                    onChange={(e) => setResolutionNote(e.target.value)}
-                                />
-                                <div className="flex gap-3 justify-end">
-                                    {selectedReport.status !== 'resolved' && (
-                                        <button
-                                            disabled={isResolving}
-                                            onClick={() => handleResolve('resolved')}
-                                            className="bg-green-600 text-white px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-green-700 transition-colors shadow-lg shadow-green-500/20 disabled:opacity-50 flex items-center gap-2"
-                                        >
-                                            {isResolving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                                            Mark Resolved
-                                        </button>
-                                    )}
-                                    {selectedReport.status === 'open' && (
-                                        <button
-                                            disabled={isResolving}
-                                            onClick={() => handleResolve('in-progress')}
-                                            className="bg-amber-500 text-white px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-amber-600 transition-colors shadow-lg shadow-amber-500/20 disabled:opacity-50"
-                                        >
-                                            Mark In-Progress
-                                        </button>
-                                    )}
+                                <div className="flex justify-end gap-3 pt-4">
+                                    <button
+                                        onClick={() => setActiveChat(null)}
+                                        className="px-6 py-4 rounded-xl font-black text-xs uppercase tracking-widest text-slate-500 hover:bg-slate-50 transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleSendMessage}
+                                        className="px-8 py-4 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-500/20 active:scale-95 transition-all flex items-center gap-2"
+                                    >
+                                        <Send size={16} />
+                                        Send
+                                    </button>
                                 </div>
                             </div>
-                        </>
-                    ) : (
-                        <div className="flex flex-col items-center justify-center h-full text-subtext opacity-50">
-                            <MessageSquare className="w-16 h-16 mb-4 text-slate-300" />
-                            <p className="font-medium">Select a report to view details</p>
-                        </div>
-                    )}
-                </div>
-            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

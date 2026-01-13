@@ -1,38 +1,59 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { ShieldAlert, Calendar, CheckCircle2, MessageSquare, ChevronRight, Bell, Shield } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { ShieldAlert, Calendar, CheckCircle2, MessageSquare, ChevronRight, Bell, Shield, Plus, X, Send, Loader2, AlertCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import apiService from '../../services/apiService';
 
 const VendorAdminSupport = () => {
     const [adminMessages, setAdminMessages] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [showForm, setShowForm] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+    const [formData, setFormData] = useState({ type: 'other', priority: 'medium', description: '' });
 
     const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const userId = user.id || user._id || localStorage.getItem('userId');
 
     useEffect(() => {
-        const fetchMessages = async () => {
-            if (!userId) return;
-            try {
-                const response = await axios.get(`http://localhost:5000/api/agents/vendor/${userId}/support?type=AdminSupport`);
-
-                // Map API data to UI format
-                const mapped = response.data.map(t => ({
-                    id: t._id,
-                    from: t.senderId === 'Admin' ? 'Admin' : 'System',
-                    subject: t.subject,
-                    date: new Date(t.createdAt).toLocaleDateString(),
-                    status: t.status
-                }));
-                setAdminMessages(mapped);
-            } catch (error) {
-                console.error("Failed to fetch admin messages", error);
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchMessages();
-    }, [userId]);
+    }, []);
+
+    const fetchMessages = async () => {
+        try {
+            const data = await apiService.getMyReports();
+            setAdminMessages(data || []);
+        } catch (error) {
+            console.error("Failed to fetch admin messages", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setSubmitting(true);
+        try {
+            await apiService.submitReport({
+                ...formData,
+                type: 'AdminSupport', // Overriding type for admin support
+                subject: `Support Request from ${user.name}`
+            });
+            await fetchMessages();
+            setShowForm(false);
+            setFormData({ type: 'other', priority: 'medium', description: '' });
+        } catch (err) {
+            alert('Failed to submit support request');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const getStatusColor = (status) => {
+        switch (status) {
+            case 'open': return 'bg-blue-50 text-blue-600 border border-blue-100';
+            case 'in-progress': return 'bg-amber-50 text-amber-600 border border-amber-100';
+            case 'resolved': return 'bg-emerald-50 text-emerald-600 border border-emerald-100';
+            default: return 'bg-gray-100 text-gray-500 border border-gray-200';
+        }
+    };
 
     return (
         <div className="space-y-8 pb-12">
@@ -43,15 +64,15 @@ const VendorAdminSupport = () => {
                     <h1 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tighter mb-2">Admin <span className="text-[#8b5cf6]">Direct.</span></h1>
                     <p className="text-gray-500 font-bold text-lg tracking-tight max-w-xl">Updates and directives from central command.</p>
                 </div>
-                <a
-                    href="mailto:admin@aimall.com?subject=Vendor%20Inquiry"
+                <button
+                    onClick={() => setShowForm(true)}
                     className="flex items-center gap-3 bg-[#8b5cf6] hover:bg-[#7c3aed] text-white px-6 py-4 rounded-[20px] shadow-lg shadow-[#8b5cf6]/30 transition-all group scale-100 hover:scale-105 active:scale-95"
                 >
                     <div className="p-1.5 bg-white/20 rounded-lg group-hover:bg-white/30 transition-colors">
-                        <ShieldAlert size={18} className="text-white" />
+                        <Plus size={18} className="text-white" />
                     </div>
                     <span className="text-xs font-black uppercase tracking-widest">Signal Command</span>
-                </a>
+                </button>
             </div>
 
             {/* Admin Messages Table */}
@@ -77,16 +98,16 @@ const VendorAdminSupport = () => {
                     <table className="w-full text-left">
                         <thead className="bg-white/40 border-b border-white/60">
                             <tr>
-                                <th className="px-8 py-5 text-xs font-black text-gray-400 uppercase tracking-widest">Source</th>
-                                <th className="px-8 py-5 text-xs font-black text-gray-400 uppercase tracking-widest">Directive Subject</th>
-                                <th className="px-8 py-5 text-xs font-black text-gray-400 uppercase tracking-widest">Received Date</th>
+                                <th className="px-8 py-5 text-xs font-black text-gray-400 uppercase tracking-widest">ID</th>
+                                <th className="px-8 py-5 text-xs font-black text-gray-400 uppercase tracking-widest">Description</th>
+                                <th className="px-8 py-5 text-xs font-black text-gray-400 uppercase tracking-widest">Submitted Date</th>
                                 <th className="px-8 py-5 text-xs font-black text-gray-400 uppercase tracking-widest text-right">Status</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100/50">
                             {adminMessages.map((msg, index) => (
                                 <motion.tr
-                                    key={msg.id}
+                                    key={msg._id}
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: index * 0.05 }}
@@ -97,17 +118,14 @@ const VendorAdminSupport = () => {
                                             <div className="w-8 h-8 rounded-full bg-[#8b5cf6]/10 flex items-center justify-center text-[#8b5cf6] border border-[#8b5cf6]/20">
                                                 <Shield size={14} />
                                             </div>
-                                            <span className="font-bold text-gray-900 group-hover:text-[#8b5cf6] transition-colors">{msg.from}</span>
+                                            <span className="font-bold text-gray-900 group-hover:text-[#8b5cf6] transition-colors">{msg._id.substring(0, 8)}...</span>
                                         </div>
                                     </td>
-                                    <td className="px-8 py-5 text-sm font-medium text-gray-700">{msg.subject}</td>
-                                    <td className="px-8 py-5 text-xs font-bold text-gray-400 uppercase tracking-wider">{msg.date}</td>
+                                    <td className="px-8 py-5 text-sm font-medium text-gray-700 max-w-md truncate">{msg.description}</td>
+                                    <td className="px-8 py-5 text-xs font-bold text-gray-400 uppercase tracking-wider">{new Date(msg.timestamp).toLocaleDateString()}</td>
                                     <td className="px-8 py-5 text-right">
-                                        <span className={`inline-flex items-center px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm ${msg.status === 'Open' ? 'bg-blue-50 text-blue-600 border border-blue-100' :
-                                            msg.status === 'Responded' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
-                                                'bg-gray-100 text-gray-500 border border-gray-200'
-                                            }`}>
-                                            {msg.status === 'Responded' && <CheckCircle2 size={12} className="mr-1" />}
+                                        <span className={`inline-flex items-center px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm ${getStatusColor(msg.status)}`}>
+                                            {msg.status === 'resolved' && <CheckCircle2 size={12} className="mr-1" />}
                                             {msg.status}
                                         </span>
                                     </td>
@@ -116,13 +134,18 @@ const VendorAdminSupport = () => {
                         </tbody>
                     </table>
                 </div>
-                {adminMessages.length === 0 && (
+                {adminMessages.length === 0 && !loading && (
                     <div className="p-16 flex flex-col items-center justify-center text-center">
                         <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-4">
                             <ShieldAlert size={32} className="text-gray-300" />
                         </div>
                         <h3 className="text-lg font-bold text-gray-900">All Systems Nominal</h3>
                         <p className="text-gray-400 font-medium">No active directives or alerts from Admin.</p>
+                    </div>
+                )}
+                {loading && (
+                    <div className="p-16 flex justify-center">
+                        <Loader2 className="w-8 h-8 animate-spin text-[#8b5cf6]" />
                     </div>
                 )}
             </motion.div>
@@ -170,6 +193,95 @@ const VendorAdminSupport = () => {
                     </div>
                 </div>
             </motion.div>
+
+            {/* Modal for Signal Command */}
+            <AnimatePresence>
+                {showForm && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-3xl overflow-y-auto no-scrollbar">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 30 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 30 }}
+                            className="bg-white/95 backdrop-blur-3xl border border-white/60 rounded-[48px] max-w-xl w-full p-12 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.3)] relative"
+                        >
+                            <button
+                                onClick={() => setShowForm(false)}
+                                className="absolute top-8 right-8 p-4 bg-white/50 hover:bg-white text-gray-900 rounded-3xl transition-all border border-gray-100 shadow-sm"
+                            >
+                                <X className="w-6 h-6" />
+                            </button>
+
+                            <div className="mb-10 flex items-center gap-6">
+                                <div className="w-16 h-16 rounded-[24px] bg-gradient-to-br from-[#8b5cf6] to-[#d946ef] flex items-center justify-center text-white shadow-xl">
+                                    <ShieldAlert size={32} />
+                                </div>
+                                <div>
+                                    <h3 className="text-xs font-black text-[#8b5cf6] uppercase tracking-[0.4em] mb-1">Signal Command</h3>
+                                    <h2 className="text-3xl font-black text-gray-900 tracking-tighter leading-none">New Ticket</h2>
+                                </div>
+                            </div>
+
+                            <form onSubmit={handleSubmit} className="space-y-6">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-2">Priority</label>
+                                        <select
+                                            className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 font-semibold text-sm outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all"
+                                            value={formData.priority}
+                                            onChange={e => setFormData({ ...formData, priority: e.target.value })}
+                                        >
+                                            <option value="low">Low</option>
+                                            <option value="medium">Medium</option>
+                                            <option value="high">High</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-2">Type</label>
+                                        <select
+                                            className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 font-semibold text-sm outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all"
+                                            value={formData.type}
+                                            onChange={e => setFormData({ ...formData, type: e.target.value })}
+                                        >
+                                            <option value="other">General Inquiry</option>
+                                            <option value="bug">Technical Issue</option>
+                                            <option value="security">Security</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-2">Description</label>
+                                    <textarea
+                                        required
+                                        rows={5}
+                                        className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 font-semibold text-sm outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all resize-none"
+                                        placeholder="Describe your issue or inquiry for admin..."
+                                        value={formData.description}
+                                        onChange={e => setFormData({ ...formData, description: e.target.value })}
+                                    />
+                                </div>
+
+                                <div className="flex gap-4 pt-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowForm(false)}
+                                        className="flex-1 py-5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-3xl font-black text-xs uppercase tracking-widest transition-all active:scale-95"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={submitting}
+                                        className="flex-[2] py-5 bg-[#8b5cf6] hover:bg-[#7c3aed] text-white rounded-3xl font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-[#8b5cf6]/30 flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-50"
+                                    >
+                                        {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                                        Initialize Ticket
+                                    </button>
+                                </div>
+                            </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

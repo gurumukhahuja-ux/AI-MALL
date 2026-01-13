@@ -15,8 +15,9 @@ import Admin from './admin/Admin';
 // Vendor Auth imports removed
 import Invoices from './pages/Invoices';
 import Notifications from './pages/Notifications';
-import Profile from './pages/Profile';
+import UserProfile from './pages/UserProfile';
 import Series from './pages/Series';
+import AdminSupport from './pages/AdminSupport';
 
 import { AppRoute } from './types';
 import { Menu } from 'lucide-react';
@@ -147,6 +148,7 @@ const NavigateProvider = () => {
           <Route path="chat/:sessionId" element={<Chat />} />
           <Route path="overview" element={<ProtectedRoute><DashboardOverview /></ProtectedRoute>} />
           <Route path="marketplace" element={<Marketplace />} />
+          <Route path="admin-support" element={<ProtectedRoute><AdminSupport /></ProtectedRoute>} />
           {/* <Route path="live-demos" element={
             <Suspense fallback={<div className="flex items-center justify-center h-full"><p className="text-subtext">Loading...</p></div>}>
               <LiveDemoPage />
@@ -158,7 +160,7 @@ const NavigateProvider = () => {
           <Route path="settings" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
           <Route path="invoices" element={<ProtectedRoute><Invoices /></ProtectedRoute>} />
           <Route path="notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
-          <Route path="profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+          <Route path="profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
 
           <Route path="security" element={
             <Suspense fallback={<div className="flex items-center justify-center h-full">Loading...</div>}>

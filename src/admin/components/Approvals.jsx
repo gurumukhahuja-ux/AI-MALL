@@ -30,7 +30,7 @@ const Approvals = () => {
 
             setPendingAgents(pending);
             setDeletionRequests(deletions);
-            setPendingVendors(vendorData.success ? vendorData.data : []);
+            setPendingVendors(vendorData?.vendors || []);
         } catch (err) {
             console.error("Failed to fetch approvals data:", err);
         } finally {
@@ -134,19 +134,19 @@ const Approvals = () => {
                         onClick={() => setActiveSubTab('apps')}
                         className={`px-6 py-2 rounded-[18px] text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeSubTab === 'apps' ? 'bg-gray-900 text-white shadow-lg' : 'text-gray-400 hover:text-gray-900'}`}
                     >
-                        App Reviews ({pendingAgents.length})
+                        App Reviews ({pendingAgents?.length || 0})
                     </button>
                     <button
                         onClick={() => setActiveSubTab('vendors')}
                         className={`px-6 py-2 rounded-[18px] text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeSubTab === 'vendors' ? 'bg-gray-900 text-white shadow-lg' : 'text-gray-400 hover:text-gray-900'}`}
                     >
-                        Vendor Requests ({pendingVendors.length})
+                        Vendor Requests ({pendingVendors?.length || 0})
                     </button>
                     <button
                         onClick={() => setActiveSubTab('deletions')}
                         className={`px-6 py-2 rounded-[18px] text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeSubTab === 'deletions' ? 'bg-gray-900 text-white shadow-lg' : 'text-gray-400 hover:text-gray-900'}`}
                     >
-                        Deletion Requests ({deletionRequests.length})
+                        Deletion Requests ({deletionRequests?.length || 0})
                     </button>
                 </div>
             </div>

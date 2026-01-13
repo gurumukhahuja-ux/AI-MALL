@@ -15,7 +15,7 @@ const Hero = () => {
             {/* Background Elements */}
             <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-gradient-to-b from-purple-200/30 to-blue-200/30 rounded-full blur-[80px] -z-10 translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
 
-            <div className="container grid grid-cols-1 md:grid-cols-2 items-center gap-16 text-center md:text-left">
+            <div className="max-w-7xl mx-auto px-6 md:px-12 xl:px-16 grid grid-cols-1 md:grid-cols-2 items-center gap-12 lg:gap-16 text-center md:text-left">
                 <div className="z-10">
                     <h1 className={`text-4xl md:text-[3.5rem] font-bold leading-[1.2] mb-6 text-[#1A1A1A] transition-all duration-1000 ease-out transform ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
                         Discover & Deploy <br />
