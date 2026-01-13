@@ -23,17 +23,10 @@ const VendorUserSupport = () => {
     const fetchMessages = async () => {
         if (!vendorId) return;
         try {
-            // Filter logic can be handled in apiService or backend if needed
-            // For now, the backend endpoint supports query params
-            // But apiService.getVendorMessages(vendorId) might need to accept params
-            // Let's assume for now we fetch all and filter client side or update apiService later if needed.
-            // Actually, the apiService method I added: custom params?
-            // apiService.getVendorMessages(vendorId) -> calls GET .../vendor/${vendorId}
-            // Let's stick to the method I created.
             const response = await apiService.getVendorMessages(vendorId);
             let msgs = response.data?.messages || [];
 
-            // Client side filtering for now since I didn't add params to apiService method explicitly
+            // Client side filtering
             if (filterStatus !== 'all') msgs = msgs.filter(m => m.status === filterStatus);
             if (filterAgent !== 'all') msgs = msgs.filter(m => m.agentName === filterAgent);
 
@@ -47,17 +40,7 @@ const VendorUserSupport = () => {
 
     const updateMessageStatus = async (messageId, status) => {
         try {
-            // We didn't add updateStatus to apiService yet, let's use apiClient directly or add it?
-            // Let's add it to apiService for cleanliness.
-            // For this specific step, I'll use the raw call via apiService's axios instance if accessible, 
-            // or just add it to apiService.js in a previous/next step? 
-            // I'll add it to apiService method now by using the internal axios client if I can or simpler:
-            // Just use axios for this one specific call if I don't want to edit apiService again, 
-            // BUT proper way is apiService. 
-            // Let's stick to axios for this single call OR assume I can edit apiService.
-            // Wait, I can't edit apiService in the middle of this Replace.
-            // I'll leave the axios call BUT fix the URL to use API constant or relative path.
-            await axios.patch(`http://localhost:5000/api/messages/${messageId}/status`, { status });
+            await apiService.updateMessageStatus(messageId, status);
             fetchMessages();
         } catch (error) {
             console.error("Failed to update status", error);
@@ -188,10 +171,19 @@ const VendorUserSupport = () => {
                                 >
                                     <td className="px-10 py-7">
                                         <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-gray-100 to-white flex items-center justify-center text-gray-700 border border-gray-200 group-hover:border-[#8b5cf6] transition-colors text-xs font-black">
-                                                {message.userName.charAt(0).toUpperCase()}
+                                            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center border transition-colors text-xs font-black shadow-sm ${message.senderType === 'Admin'
+                                                ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-white border-orange-400'
+                                                : 'bg-gradient-to-br from-gray-100 to-white text-gray-700 border-gray-200 group-hover:border-[#8b5cf6]'}`}>
+                                                {message.senderType === 'Admin' ? 'A' : message.userName.charAt(0).toUpperCase()}
                                             </div>
-                                            <span className="font-black text-gray-900 group-hover:text-[#8b5cf6] transition-colors tracking-tight text-sm">{message.userName}</span>
+                                            <div className="flex flex-col">
+                                                <span className="font-black text-gray-900 group-hover:text-[#8b5cf6] transition-colors tracking-tight text-sm">
+                                                    {message.userName}
+                                                </span>
+                                                {message.senderType === 'Admin' && (
+                                                    <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest leading-none mt-0.5">System Admin</span>
+                                                )}
+                                            </div>
                                         </div>
                                     </td>
                                     <td className="px-10 py-7">

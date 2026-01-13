@@ -233,6 +233,48 @@ export const apiService = {
     }
   },
 
+  async approveDeletion(id) {
+    try {
+      const response = await apiClient.post(`/agents/admin/approve-deletion/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error("Failed to approve deletion:", error);
+      throw error;
+    }
+  },
+
+  async rejectDeletion(id, reason) {
+    try {
+      const response = await apiClient.post(`/agents/admin/reject-deletion/${id}`, { reason });
+      return response.data;
+    } catch (error) {
+      console.error("Failed to reject deletion:", error);
+      throw error;
+    }
+  },
+
+  // Dashboard Messaging
+  async sendDashboardMessage(data) {
+    try {
+      const response = await apiClient.post('/dashboard-messages', data);
+      return response.data;
+    } catch (error) {
+      console.error("Failed to send dashboard message", error);
+      throw error;
+    }
+  },
+
+  async getVendorDashboardMessages(vendorId) {
+    try {
+      const response = await apiClient.get(`/dashboard-messages/vendor/${vendorId}`);
+      return response.data;
+    } catch (error) {
+      console.error("Failed to fetch vendor dashboard messages", error);
+      // Return empty array/object on failure to prevent UI crash
+      return { success: false, data: [] };
+    }
+  },
+
   async rejectAgent(id, reason) {
     try {
       const response = await apiClient.post(`/agents/reject/${id}`, { reason });
@@ -452,6 +494,26 @@ export const apiService = {
     }
   },
 
+  async getMyReports() {
+    try {
+      const response = await apiClient.get('/reports/my-reports');
+      return response.data;
+    } catch (error) {
+      console.error("Failed to fetch my reports:", error);
+      return [];
+    }
+  },
+
+  async deleteReport(id) {
+    try {
+      const response = await apiClient.delete(`/reports/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error("Failed to delete report:", error);
+      throw error;
+    }
+  },
+
   async resolveReport(id, status, resolutionNote) {
     try {
       const response = await apiClient.put(`/reports/${id}/resolve`, { status, resolutionNote });
@@ -472,6 +534,26 @@ export const apiService = {
     }
   },
 
+  async getReportMessages(reportId) {
+    try {
+      const response = await apiClient.get(`/reports/${reportId}/messages`);
+      return response.data;
+    } catch (error) {
+      console.error("Failed to fetch report messages:", error);
+      return [];
+    }
+  },
+
+  async sendReportMessage(reportId, message) {
+    try {
+      const response = await apiClient.post(`/reports/${reportId}/messages`, { message });
+      return response.data;
+    } catch (error) {
+      console.error("Failed to send report message:", error);
+      throw error;
+    }
+  },
+
   async contactVendor(data) {
     try {
       const response = await apiClient.post('/messages/contact-vendor', data);
@@ -479,6 +561,16 @@ export const apiService = {
     } catch (error) {
       console.error("Failed to contact vendor:", error);
       throw error;
+    }
+  },
+
+  async getVendorSupportMessages(userId) {
+    try {
+      const response = await apiClient.get(`/agents/vendor/${userId}/support?type=AdminSupport`);
+      return response.data;
+    } catch (error) {
+      console.error("Failed to fetch vendor support messages:", error);
+      return [];
     }
   },
 
@@ -508,6 +600,16 @@ export const apiService = {
       return response.data;
     } catch (error) {
       console.error("Failed to reply:", error);
+      throw error;
+    }
+  },
+
+  async updateMessageStatus(messageId, status) {
+    try {
+      const response = await apiClient.patch(`/messages/${messageId}/status`, { status });
+      return response.data;
+    } catch (error) {
+      console.error("Failed to update message status:", error);
       throw error;
     }
   },

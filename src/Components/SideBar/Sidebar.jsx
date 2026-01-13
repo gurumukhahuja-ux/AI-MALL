@@ -132,7 +132,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     { id: 'marketplace', icon: ShoppingBag, label: t('marketplace'), route: AppRoute.MARKETPLACE, onClick: () => setNotifyTgl(prev => ({ ...prev, marketPlaceMode: 'AIMall' })) },
     //{ id: 'vendor', icon: LayoutGrid, label: t('vendorDashboard'), route: '/vendor/overview' },
     // { id: 'billing', icon: FileText, label: t('billing'), route: AppRoute.INVOICES },
-    //{ id: 'admin', icon: Settings, label: t('adminDashboard'), route: AppRoute.ADMIN },
+    { id: 'admin', icon: Settings, label: t('adminDashboard'), route: AppRoute.ADMIN },
   ];
 
   const toggleSection = (section) => {

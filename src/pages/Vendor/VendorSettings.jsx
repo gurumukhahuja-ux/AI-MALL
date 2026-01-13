@@ -87,8 +87,8 @@ const VendorSettings = () => {
                     {/* Avatar Section */}
                     <div className="relative -mt-16 mb-12 flex items-end">
                         <div className="relative group">
-                            <div className="w-32 h-32 rounded-[28px] p-1.5 bg-white/20 backdrop-blur-md border border-white/40 shadow-2xl">
-                                <div className="w-full h-full bg-gradient-to-br from-gray-100 to-white rounded-[22px] flex items-center justify-center text-4xl font-black text-gray-400 border border-white/60 overflow-hidden relative">
+                            <div className={`w-32 h-32 rounded-[28px] p-1.5 ${formData.avatar ? 'bg-white' : 'bg-white/20 backdrop-blur-md'} border border-white/40 shadow-2xl transition-all`}>
+                                <div className={`w-full h-full ${formData.avatar ? 'bg-white' : 'bg-gradient-to-br from-gray-100 to-white'} rounded-[22px] flex items-center justify-center text-4xl font-black text-gray-400 border border-white/60 overflow-hidden relative transition-all`}>
                                     {formData.avatar ? (
                                         <img src={formData.avatar} alt="Profile" className="w-full h-full object-cover" />
                                     ) : (
@@ -226,7 +226,7 @@ const VendorSettings = () => {
                                 type="button"
                                 onClick={handleSave}
                                 disabled={isLoading}
-                                className="bg-gray-900 text-white px-8 py-4 rounded-[20px] text-xs font-black uppercase tracking-widest hover:bg-[#8b5cf6] transition-all shadow-lg hover:shadow-[#8b5cf6]/40 active:scale-95 flex items-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed group"
+                                className="bg-[#8b5cf6] text-white px-8 py-4 rounded-[20px] text-xs font-black uppercase tracking-widest hover:bg-[#7c3aed] transition-all shadow-lg shadow-purple-500/30 active:scale-95 flex items-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed group border-2 border-[#7c3aed]"
                             >
                                 {isLoading ? (
                                     <>

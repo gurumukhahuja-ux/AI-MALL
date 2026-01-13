@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bell, Search, User, CheckCircle, AlertCircle, X, Menu, Cpu } from 'lucide-react';
+import { Bell, Search, User, CheckCircle, AlertCircle, X, Menu, Cpu, LogOut, Settings as SettingsIcon } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import axios from 'axios';
 import { apis } from '../../types';
@@ -10,7 +10,9 @@ const Topbar = ({ toggleSidebar, vendorName, vendorType, vendorAvatar }) => {
     const [unreadCount, setUnreadCount] = useState(0);
     const navigate = useNavigate();
     const notificationRef = useRef(null);
+    const profileRef = useRef(null);
     const [searchQuery, setSearchQuery] = useState("");
+    const [showProfileDropdown, setShowProfileDropdown] = useState(false);
 
     // Fetch Notifications
     const fetchNotifications = async () => {
@@ -44,6 +46,9 @@ const Topbar = ({ toggleSidebar, vendorName, vendorType, vendorAvatar }) => {
         const handleClickOutside = (event) => {
             if (notificationRef.current && !notificationRef.current.contains(event.target)) {
                 setShowNotifications(false);
+            }
+            if (profileRef.current && !profileRef.current.contains(event.target)) {
+                setShowProfileDropdown(false);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
@@ -165,11 +170,11 @@ const Topbar = ({ toggleSidebar, vendorName, vendorType, vendorAvatar }) => {
                     )}
                 </div>
 
-                {/* Profile - Direct Link to Settings */}
-                <div className="relative pl-6 ml-2 border-l border-gray-200/50">
+                {/* Profile - Dropdown on Click */}
+                <div className="relative pl-6 ml-2 border-l border-gray-200/50" ref={profileRef}>
                     <button
-                        onClick={() => navigate('/vendor/settings')}
-                        className="flex items-center gap-4 p-1.5 pr-4 rounded-[20px] hover:bg-white/40 hover:shadow-sm transition-all border border-transparent hover:border-white/60 group bg-white/20 backdrop-blur-sm"
+                        onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+                        className={`flex items-center gap-4 p-1.5 pr-4 rounded-[20px] transition-all border group bg-white/20 backdrop-blur-sm ${showProfileDropdown ? 'bg-white border-white shadow-md' : 'hover:bg-white/40 border-transparent hover:border-white/60 hover:shadow-sm'}`}
                     >
                         <div className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center text-[#8b5cf6] font-black border border-white/60 shadow-lg group-hover:scale-105 transition-transform overflow-hidden relative">
                             <div className="absolute inset-0 bg-gradient-to-tr from-[#f3e8ff] to-[#e0e7ff] opacity-50" />
@@ -187,6 +192,34 @@ const Topbar = ({ toggleSidebar, vendorName, vendorType, vendorAvatar }) => {
                             </div>
                         </div>
                     </button>
+
+                    {/* Profile Dropdown */}
+                    {showProfileDropdown && (
+                        <div className="absolute right-0 top-full mt-4 w-56 bg-white/80 backdrop-blur-3xl rounded-[24px] shadow-[0_20px_40px_-10px_rgba(0,0,0,0.1)] border border-white overflow-hidden z-40 animate-in fade-in zoom-in-95 duration-200 origin-top-right">
+                            <div className="p-2">
+                                <button
+                                    onClick={() => { navigate('/vendor/settings'); setShowProfileDropdown(false); }}
+                                    className="w-full flex items-center gap-3 px-4 py-3 rounded-[18px] text-gray-500 hover:bg-white hover:text-[#8b5cf6] transition-all group text-left"
+                                >
+                                    <SettingsIcon size={18} className="group-hover:rotate-45 transition-transform" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest">Settings</span>
+                                </button>
+                                <div className="h-px bg-gray-100 my-1 mx-2" />
+                                <button
+                                    onClick={() => {
+                                        localStorage.removeItem('user');
+                                        localStorage.removeItem('token');
+                                        localStorage.removeItem('vendorId');
+                                        navigate('/vendor-login');
+                                    }}
+                                    className="w-full flex items-center gap-3 px-4 py-3 rounded-[18px] text-red-500 hover:bg-red-50 transition-all group text-left"
+                                >
+                                    <LogOut size={18} className="group-hover:-translate-x-1 transition-transform" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest">Logout Portal</span>
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </header>

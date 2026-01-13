@@ -37,7 +37,7 @@ const AppListTable = ({ apps, onAppCreated }) => {
 
                     <button
                         onClick={() => setIsModalOpen(true)}
-                        className="px-6 py-3 bg-gray-900 text-white rounded-[20px] text-xs font-black uppercase tracking-widest shadow-lg hover:shadow-xl hover:bg-[#8b5cf6] hover:scale-105 active:scale-95 transition-all flex items-center gap-2 group"
+                        className="px-6 py-3 bg-[#8b5cf6] text-white rounded-[20px] text-xs font-black uppercase tracking-widest shadow-lg shadow-purple-500/30 hover:shadow-xl hover:bg-[#7c3aed] hover:scale-105 active:scale-95 transition-all flex items-center gap-2 group"
                     >
                         <span className="text-lg leading-none mb-0.5">+</span> Create New Agent
                     </button>
@@ -86,7 +86,7 @@ const AppListTable = ({ apps, onAppCreated }) => {
                                         </div>
                                     </td>
                                     <td className="px-8 py-6 whitespace-nowrap">
-                                        <StatusBadge status={(app.reviewStatus === 'Pending Review' || app.reviewStatus === 'Rejected') ? app.reviewStatus : app.status} />
+                                        <StatusBadge status={app.deletionStatus === 'Pending' ? 'Pending Deletion' : (app.reviewStatus === 'Pending Review' || app.reviewStatus === 'Rejected') ? app.reviewStatus : app.status} />
                                     </td>
                                     <td className="px-8 py-6 whitespace-nowrap text-right">
                                         <div className="flex items-center justify-end gap-3">

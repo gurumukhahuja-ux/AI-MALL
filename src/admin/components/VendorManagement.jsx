@@ -72,10 +72,11 @@ const VendorManagement = () => {
     };
 
     const filteredTickets = tickets.filter(ticket => {
+        const isVendorSupport = ticket.type === 'AdminSupport';
         const matchesFilter = filter === 'all' || ticket.status === filter;
         const matchesSearch = ticket.userId?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             ticket.description?.toLowerCase().includes(searchTerm.toLowerCase());
-        return matchesFilter && matchesSearch;
+        return isVendorSupport && matchesFilter && matchesSearch;
     });
 
     const getStatusColor = (status) => {
@@ -128,36 +129,42 @@ const VendorManagement = () => {
                     <table className="w-full text-left">
                         <thead>
                             <tr className="border-b border-white/60 bg-white/20">
-                                <th className="px-6 py-3 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Name</th>
-                                <th className="px-6 py-3 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Role</th>
-                                <th className="px-6 py-3 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Email</th>
-                                <th className="px-6 py-3 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Joined Date</th>
+                                <th className="px-6 py-3 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Vendor</th>
+                                <th className="px-6 py-3 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Type</th>
+                                <th className="px-6 py-3 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Message Preview</th>
+                                <th className="px-6 py-3 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Date</th>
                                 <th className="px-6 py-3 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Status</th>
-                                <th className="px-6 py-3 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] text-right">Agents</th>
+                                <th className="px-6 py-3 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/60">
                             {filteredTickets.length > 0 ? (
                                 filteredTickets.map((ticket) => (
-                                    <tr key={ticket._id} className="hover:bg-white/40 transition-colors group">
+                                    <tr key={ticket._id}
+                                        onClick={() => handleReplyClick(ticket)}
+                                        className="hover:bg-white/40 transition-colors group cursor-pointer"
+                                    >
                                         <td className="px-6 py-3">
                                             <div className="flex items-center gap-4">
                                                 <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#d946ef] to-[#8b5cf6] flex items-center justify-center text-white font-black shadow-lg">
                                                     {(ticket.userId?.name || 'A').charAt(0)}
                                                 </div>
-                                                <span className="font-bold text-gray-900 text-sm">{ticket.userId?.name || 'Anonymous'}</span>
+                                                <div className="flex flex-col">
+                                                    <span className="font-bold text-gray-900 text-sm">{ticket.userId?.name || 'Anonymous'}</span>
+                                                    <span className="text-[10px] text-gray-400">{ticket.userId?.email || 'N/A'}</span>
+                                                </div>
                                             </div>
                                         </td>
                                         <td className="px-6 py-3">
-                                            <span className="px-2 py-1 rounded-lg bg-blue-50 text-blue-600 text-[9px] font-black uppercase tracking-wider border border-blue-100">
-                                                Vendor
+                                            <span className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider border ${ticket.type === 'AdminSupport' ? 'bg-purple-50 text-purple-600 border-purple-100' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
+                                                {ticket.type || 'Support'}
                                             </span>
                                         </td>
                                         <td className="px-6 py-3">
-                                            <span className="text-xs font-medium text-gray-500">{ticket.userId?.email || 'N/A'}</span>
+                                            <p className="text-xs font-medium text-gray-500 line-clamp-1 max-w-xs">{ticket.description}</p>
                                         </td>
                                         <td className="px-6 py-3">
-                                            <span className="text-xs font-medium text-gray-500">Oct 24, 2025</span>
+                                            <span className="text-xs font-medium text-gray-500">{new Date(ticket.timestamp || ticket.createdAt).toLocaleDateString()}</span>
                                         </td>
                                         <td className="px-6 py-3">
                                             <div className={`inline-flex items-center gap-2 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider border ${getStatusColor(ticket.status)}`}>
@@ -166,7 +173,9 @@ const VendorManagement = () => {
                                             </div>
                                         </td>
                                         <td className="px-6 py-3 text-right">
-                                            <span className="font-black text-gray-900 text-xs">0</span>
+                                            <button className="p-2 bg-white rounded-lg border border-gray-100 text-gray-400 hover:text-[#8b5cf6] hover:border-[#8b5cf6]/20 transition-all shadow-sm">
+                                                <MessageSquare size={14} />
+                                            </button>
                                         </td>
                                     </tr>
                                 ))

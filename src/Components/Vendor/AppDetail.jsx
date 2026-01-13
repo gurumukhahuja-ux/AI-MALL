@@ -79,13 +79,32 @@ const AppDetail = ({ app, usage, onDeactivate, onReactivate, onSubmitForReview, 
                         </button>
                     )}
 
-                    {/* Delete: ALWAYS Valid */}
-                    <button onClick={() => setIsDeleteModalOpen(true)} className="px-5 py-2.5 rounded-xl bg-red-500/10 text-red-600 border border-red-500/20 text-xs font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all flex items-center gap-2">
-                        <Trash2 size={14} /> Delete
+                    {/* Delete: ALWAYS Valid (unless already pending) */}
+                    <button
+                        onClick={() => setIsDeleteModalOpen(true)}
+                        disabled={app.deletionStatus === 'Pending'}
+                        className={`px-5 py-2.5 rounded-xl border text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${app.deletionStatus === 'Pending'
+                                ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                                : 'bg-red-500/10 text-red-600 border-red-500/20 hover:bg-red-500 hover:text-white'
+                            }`}
+                    >
+                        <Trash2 size={14} /> {app.deletionStatus === 'Pending' ? 'Deletion Pending' : 'Delete'}
                     </button>
 
                 </div>
             </div>
+
+            {app.deletionStatus === 'Pending' && (
+                <div className="mx-8 mt-8 p-6 bg-red-50 border border-red-100 rounded-[24px] flex items-center gap-4 animate-pulse">
+                    <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center text-red-600">
+                        <AlertCircle size={24} />
+                    </div>
+                    <div>
+                        <h4 className="text-sm font-black text-red-900 uppercase tracking-tight">Deletion Request Pending</h4>
+                        <p className="text-xs font-medium text-red-600/80">Admin protocol is reviewing your termination request. All neural connections will be severed upon approval.</p>
+                    </div>
+                </div>
+            )}
 
             <div className="p-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Basic Info & Description */}

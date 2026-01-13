@@ -16,9 +16,9 @@ import {
     LayoutDashboard,
     ChevronLeft,
     ChevronRight,
-    User,
     X,
-    Menu
+    Menu,
+    Headset
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -33,7 +33,7 @@ import TransactionHistory from "./components/TransactionHistory";
 import Complaints from "./components/Complaints";
 import AccessControl from "./components/AccessControl";
 import PlatformSettings from "./components/PlatformSettings";
-import AdminSupport from "./components/Support";
+import SupportChat from "./components/SupportChat";
 
 const Admin = () => {
     const [activeTab, setActiveTab] = useState("overview");
@@ -75,7 +75,7 @@ const Admin = () => {
                     { id: "transactions", label: "Transaction History" }
                 ]
             },
-            { id: "complaints", label: "User Support", icon: AlertTriangle },
+            { id: "complaints", label: "Neural Support", icon: Headset },
             { id: "users", label: "User Management", icon: Users },
             { id: "vendors", label: "Vendor Support", icon: UserCheck },
         ],
@@ -94,7 +94,7 @@ const Admin = () => {
             case "agents": return <AgentManagement />;
             case "finance":
                 return activeSubTab === "transactions" ? <TransactionHistory /> : <Financials />;
-            case "complaints": return <AdminSupport />;
+            case "complaints": return <SupportChat />;
             case "roles": return <AccessControl />;
             case "settings": return <PlatformSettings />;
             default: return <AdminOverview />;
