@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Routes, Route, Outlet, Navigate, BrowserRouter, Link } from 'react-router';
+import { Toaster } from 'react-hot-toast';
 
 import Landing from './pages/Landing';
 import Login from './pages/Login';
@@ -123,6 +124,7 @@ const PlaceholderPage = ({ title }) => (
 const NavigateProvider = () => {
   return (
     <BrowserRouter>
+      <Toaster position="top-center" reverseOrder={false} />
       <Routes>
         {/* Public Routes */}
         <Route path={AppRoute.LANDING} element={<Landing />} />
