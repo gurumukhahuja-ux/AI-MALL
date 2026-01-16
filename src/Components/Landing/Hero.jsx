@@ -11,32 +11,32 @@ const Hero = () => {
     }, []);
 
     return (
-        <section className="py-16 pb-24 overflow-hidden relative min-h-[600px] flex items-center">
+        <section className="py-12 md:py-16 pb-20 md:pb-24 overflow-hidden relative min-h-[500px] md:min-h-[600px] flex items-center">
             {/* Background Elements */}
-            <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-gradient-to-b from-purple-200/30 to-blue-200/30 rounded-full blur-[80px] -z-10 translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
+            <div className="absolute top-0 right-0 w-[400px] md:w-[600px] h-[400px] md:h-[600px] bg-gradient-to-b from-purple-200/30 to-blue-200/30 rounded-full blur-[80px] -z-10 translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
 
-            <div className="container grid grid-cols-1 md:grid-cols-2 items-center gap-16 text-center md:text-left">
+            <div className="max-w-7xl mx-auto px-6 md:px-12 xl:px-16 grid grid-cols-1 md:grid-cols-2 items-center gap-12 lg:gap-16 text-center md:text-left">
                 <div className="z-10">
-                    <h1 className={`text-4xl md:text-[3.5rem] font-bold leading-[1.2] mb-6 text-[#1A1A1A] transition-all duration-1000 ease-out transform ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
+                    <h1 className={`text-4xl sm:text-5xl md:text-[3.5rem] font-bold leading-[1.15] mb-6 text-[#1A1A1A] transition-all duration-1000 ease-out transform ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
                         Discover & Deploy <br />
                         <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#3B82F6] to-[#8B5CF6]">
                             AI Solutions
                         </span>
                     </h1>
 
-                    <p className={`text-xl text-[#555] mb-10 max-w-[90%] mx-auto md:mx-0 font-medium transition-all duration-1000 delay-100 ease-out transform ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
+                    <p className={`text-lg md:text-xl text-[#555] mb-10 max-w-[90%] mx-auto md:mx-0 font-medium transition-all duration-1000 delay-100 ease-out transform ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
                         Your vendors marketplace for intelligent agents
                     </p>
 
-                    <div className={`flex gap-6 justify-center md:justify-start transition-all duration-1000 delay-200 ease-out transform ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
+                    <div className={`flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center md:justify-start transition-all duration-1000 delay-200 ease-out transform ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
                         <button
                             onClick={() => navigate('/dashboard/chat')}
-                            className="px-8 py-3.5 rounded-full font-bold text-base text-white bg-[#8b5cf6] hover:bg-[#7c3aed] shadow-lg shadow-purple-500/50 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-purple-500/60 active:scale-95 outline-none focus:ring-4 focus:ring-purple-400/50">
+                            className="w-full sm:w-auto px-8 py-4 rounded-full font-bold text-base text-white bg-[#8b5cf6] hover:bg-[#7c3aed] shadow-lg shadow-purple-500/50 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-purple-500/60 active:scale-95 outline-none focus:ring-4 focus:ring-purple-400/50">
                             AI Mall
                         </button>
                         <button
                             onClick={() => window.location.href = "https://a-series-bgve.onrender.com/dashboard/chat"}
-                            className="px-8 py-3.5 rounded-full font-bold text-base text-white bg-[#3b82f6] hover:bg-[#2563eb] shadow-lg shadow-blue-500/50 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-500/60 active:scale-95 outline-none focus:ring-4 focus:ring-blue-400/50">
+                            className="w-full sm:w-auto px-8 py-4 rounded-full font-bold text-base text-white bg-[#3b82f6] hover:bg-[#2563eb] shadow-lg shadow-blue-500/50 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-500/60 active:scale-95 outline-none focus:ring-4 focus:ring-blue-400/50">
                             A Series
                         </button>
                     </div>

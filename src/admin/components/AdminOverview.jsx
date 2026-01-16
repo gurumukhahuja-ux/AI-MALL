@@ -16,16 +16,79 @@ import {
 import { motion } from 'framer-motion';
 import apiService from '../../services/apiService';
 import CreateAppModal from './CreateAppModal';
+import {
+    Chart as ChartJS,
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    LineElement,
+    Title,
+    Tooltip,
+    Legend,
+    Filler
+} from 'chart.js';
+import { Line } from 'react-chartjs-2';
+
+ChartJS.register(
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    LineElement,
+    Title,
+    Tooltip,
+    Legend,
+    Filler
+);
 
 const AdminOverview = () => {
     const [statsData, setStatsData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [showCreateModal, setShowCreateModal] = useState(false);
 
+    const chartData = {
+        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+        datasets: [
+            {
+                label: 'Growth',
+                data: [12, 19, 15, 25, 22, 30, 45, 50, 48, 60, 75, 90],
+                fill: true,
+                backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                borderColor: '#8b5cf6',
+                borderWidth: 3,
+                tension: 0.4,
+                pointRadius: 0
+            }
+        ]
+    };
+
+    const chartOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false },
+            tooltip: { enabled: true }
+        },
+        scales: {
+            x: { display: false },
+            y: { display: false }
+        }
+    };
+
     const fetchStats = async () => {
+        // Fetching stats...
         try {
-            const data = await apiService.getAdminOverviewStats();
-            setStatsData(data);
+            const [data, allVendorsData] = await Promise.all([
+                apiService.getAdminOverviewStats(),
+                apiService.getAllVendors('approved')
+            ]);
+
+            const approvedCount = allVendorsData?.count || 0;
+
+            setStatsData({
+                ...data,
+                // Add activeVendors count to the stats data state
+                activeVendors: approvedCount
+            });
         } catch (err) {
             console.error("Failed to fetch admin overview stats:", err);
         } finally {
@@ -76,54 +139,26 @@ const AdminOverview = () => {
                 <div className="relative group w-full lg:w-80">
                     <input
                         type="text"
-                        placeholder="Search your apps..."
+                        placeholder="Search..."
                         className="w-full bg-white/40 backdrop-blur-md border border-white/60 rounded-[16px] px-3 py-2.5 pl-9 focus:outline-none focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all font-medium text-sm text-gray-900 placeholder-gray-400"
                     />
                     <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#8b5cf6] transition-colors" />
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2 pointer-events-none">
-                        <span className="text-[9px] font-black text-gray-400">A-Series ™</span>
-                        <div className="w-5 h-5 rounded-md bg-[#8b5cf6]/10 flex items-center justify-center text-[9px] font-black text-[#8b5cf6]">A</div>
-                    </div>
                 </div>
             </div>
 
-            {/* Systems Operational Card */}
-            <div className="bg-white/40 backdrop-blur-2xl border border-white/60 rounded-[28px] p-5 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.05)] relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-green-400/10 to-emerald-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-green-400/20 transition-all duration-700" />
-
-                <div className="flex flex-col lg:flex-row items-center justify-between gap-4 relative z-10">
-                    <div className="flex items-center gap-5">
-                        <div className="w-14 h-14 rounded-[18px] bg-red-50 flex items-center justify-center shadow-inner relative overflow-hidden">
-                            <div className="absolute inset-0 bg-gradient-to-br from-red-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <Activity className="w-6 h-6 text-red-500 relative z-10" />
-                        </div>
-                        <div>
-                            <h2 className="text-xl font-black text-gray-900 tracking-tight mb-1.5">Systems Operational</h2>
-                            <div className="flex items-center gap-2">
-                                <span className="bg-gray-100/80 text-gray-500 px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-widest border border-gray-200/50">System Ready</span>
-                                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-50/50 px-2.5 py-0.5 rounded-lg border border-blue-100/50">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse"></div>
-                                    Production v2.4
-                                </div>
-                            </div>
-                        </div>
+            {/* Analysis Chart */}
+            <div className="bg-white/40 backdrop-blur-2xl border border-white/60 rounded-[32px] p-8 shadow-sm overflow-hidden relative group h-48">
+                <div className="absolute inset-0 z-0 opacity-50">
+                    <Line data={chartData} options={chartOptions} />
+                </div>
+                <div className="relative z-10 flex flex-col justify-between h-full">
+                    <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Live Growth Analysis</span>
                     </div>
-
-                    <div className="flex items-center gap-6 lg:border-l border-gray-200/50 lg:pl-6">
-                        <div>
-                            <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-1">Last Review</p>
-                            <div className="flex items-center gap-2">
-                                <Activity className="w-3 h-3 text-gray-900" />
-                                <span className="font-bold text-gray-900 text-sm">No recent reviews</span>
-                            </div>
-                        </div>
-                        <div>
-                            <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-1">Compliance</p>
-                            <div className="flex items-center gap-2">
-                                <div className="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]"></div>
-                                <span className="font-bold text-gray-900 text-sm">All Apps Approved</span>
-                            </div>
-                        </div>
+                    <div>
+                        <h4 className="text-3xl font-black text-slate-900 tracking-tighter">+84.2%</h4>
+                        <p className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest mt-1">Growth optimized this month</p>
                     </div>
                 </div>
             </div>
@@ -134,7 +169,26 @@ const AdminOverview = () => {
                     <h3 className="text-xs font-black text-gray-900 uppercase tracking-[0.2em] relative top-[1px]">Performance Snapshot</h3>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Pending Approvals - NEW */}
+                    <motion.div
+                        whileHover={{ y: -3 }}
+                        className="bg-white/40 backdrop-blur-2xl border border-white/60 rounded-[24px] p-5 hover:shadow-[0_20px_40px_-10px_rgba(0,0,0,0.05)] transition-all group"
+                    >
+                        <div className="flex justify-between items-start mb-3">
+                            <span className="text-[11px] font-black text-gray-400 uppercase tracking-widest group-hover:text-[#8b5cf6] transition-colors">Pending Approvals</span>
+                            <div className="flex items-center gap-1 text-[10px] font-bold text-amber-500 bg-amber-50 px-2 py-0.5 rounded-md">
+                                <Activity className="w-2.5 h-2.5" /> Action
+                            </div>
+                        </div>
+                        <div className="flex items-end justify-between">
+                            <p className="text-3xl font-black text-gray-900 tracking-tighter">{statsData?.pendingApprovals || 0}</p>
+                            <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center group-hover:bg-[#8b5cf6] transition-colors">
+                                <CheckCircle className="w-4 h-4 text-gray-400 group-hover:text-white transition-colors" />
+                            </div>
+                        </div>
+                    </motion.div>
+
                     {/* Total Users */}
                     <motion.div
                         whileHover={{ y: -3 }}
@@ -142,53 +196,59 @@ const AdminOverview = () => {
                     >
                         <div className="flex justify-between items-start mb-3">
                             <span className="text-[11px] font-black text-gray-400 uppercase tracking-widest group-hover:text-[#8b5cf6] transition-colors">Total Users</span>
-                            <div className="flex items-center gap-1 text-[10px] font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded-md">
-                                <Activity className="w-2.5 h-2.5" /> 0%
-                            </div>
                         </div>
                         <div className="flex items-end justify-between">
-                            <p className="text-3xl font-black text-gray-900 tracking-tighter">{statsData?.activeUsers || 7}</p>
-                            <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center group-hover:bg-[#8b5cf6] transition-colors">
-                                <Users className="w-4 h-4 text-gray-400 group-hover:text-white transition-colors" />
-                            </div>
+                            <p className="text-3xl font-black text-gray-900 tracking-tighter">{statsData?.totalUsers || 0}</p>
                         </div>
                     </motion.div>
 
-                    {/* Active Agents */}
+                    {/* Total Vendors */}
                     <motion.div
                         whileHover={{ y: -3 }}
                         className="bg-white/40 backdrop-blur-2xl border border-white/60 rounded-[24px] p-5 hover:shadow-[0_20px_40px_-10px_rgba(0,0,0,0.05)] transition-all group"
                     >
                         <div className="flex justify-between items-start mb-3">
-                            <span className="text-[11px] font-black text-gray-400 uppercase tracking-widest group-hover:text-[#8b5cf6] transition-colors">Active Agents</span>
-                            <div className="flex items-center gap-1 text-[10px] font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded-md">
-                                <Activity className="w-2.5 h-2.5" /> 0%
-                            </div>
+                            <span className="text-[11px] font-black text-gray-400 uppercase tracking-widest group-hover:text-[#8b5cf6] transition-colors">Total Vendors</span>
                         </div>
                         <div className="flex items-end justify-between">
-                            <p className="text-3xl font-black text-gray-900 tracking-tighter">{statsData?.totalAgents || 2}</p>
-                            <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center group-hover:bg-[#8b5cf6] transition-colors">
-                                <Zap className="w-4 h-4 text-gray-400 group-hover:text-white transition-colors" />
-                            </div>
+                            <p className="text-3xl font-black text-gray-900 tracking-tighter">{statsData?.totalVendors || 0}</p>
                         </div>
                     </motion.div>
 
-                    {/* Revenue */}
+                    {/* Registered Vendors */}
                     <motion.div
                         whileHover={{ y: -3 }}
                         className="bg-white/40 backdrop-blur-2xl border border-white/60 rounded-[24px] p-5 hover:shadow-[0_20px_40px_-10px_rgba(0,0,0,0.05)] transition-all group"
                     >
                         <div className="flex justify-between items-start mb-3">
-                            <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest group-hover:text-[#8b5cf6] transition-colors">Revenue (MTD)</span>
-                            <div className="flex items-center gap-1 text-[9px] font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded-md">
-                                <Activity className="w-2.5 h-2.5" /> 0%
+                            <span className="text-[11px] font-black text-gray-400 uppercase tracking-widest group-hover:text-[#8b5cf6] transition-colors">Registered Vendors</span>
+                            <div className="flex items-center gap-1 text-[10px] font-bold text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-md">
+                                <Activity className="w-2.5 h-2.5" /> Active
                             </div>
                         </div>
                         <div className="flex items-end justify-between">
-                            <p className="text-3xl font-black text-gray-900 tracking-tighter">$0</p>
+                            <p className="text-3xl font-black text-gray-900 tracking-tighter">{statsData?.activeVendors || 0}</p>
+                            <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center group-hover:bg-[#8b5cf6] transition-colors">
+                                <ShieldCheck className="w-4 h-4 text-gray-400 group-hover:text-white transition-colors" />
+                            </div>
+
+                        </div>
+                    </motion.div>
+
+                    {/* Total Revenue */}
+                    <motion.div
+                        whileHover={{ y: -3 }}
+                        className="bg-white/40 backdrop-blur-2xl border border-white/60 rounded-[24px] p-5 hover:shadow-[0_20px_40px_-10px_rgba(0,0,0,0.05)] transition-all group"
+                    >
+                        <div className="flex justify-between items-start mb-3">
+                            <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest group-hover:text-[#8b5cf6] transition-colors">Total Revenue</span>
+                        </div>
+                        <div className="flex items-end justify-between">
+                            <p className="text-3xl font-black text-gray-900 tracking-tighter">₹{statsData?.totalRevenue?.toLocaleString() || '0'}</p>
                             <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center group-hover:bg-[#8b5cf6] transition-colors">
                                 <DollarSign className="w-4 h-4 text-gray-400 group-hover:text-white transition-colors" />
                             </div>
+
                         </div>
                     </motion.div>
                 </div>
@@ -212,8 +272,6 @@ const AdminOverview = () => {
                             <button className="text-[9px] font-bold text-blue-400 uppercase tracking-widest hover:text-blue-600 transition-colors flex items-center gap-2">
                                 Invoice <ArrowUpRight className="w-2.5 h-2.5" />
                             </button>
-                            <Activity className="w-3.5 h-3.5 text-gray-300" />
-                            <Activity className="w-3.5 h-3.5 text-gray-300" />
                         </div>
                     </div>
 
@@ -223,7 +281,7 @@ const AdminOverview = () => {
                                 <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest group-hover:text-gray-600">Gross Sales</p>
                                 <Wallet className="w-3.5 h-3.5 text-gray-300 group-hover:text-[#8b5cf6]" />
                             </div>
-                            <p className="text-2xl font-black text-gray-900 tracking-tighter">$0</p>
+                            <p className="text-2xl font-black text-gray-900 tracking-tighter">₹{statsData?.financials?.grossSales || 0}</p>
                         </div>
 
                         <div className="bg-gray-50/50 rounded-[20px] p-4 border border-gray-100 hover:bg-white hover:shadow-lg transition-all group">
@@ -231,7 +289,7 @@ const AdminOverview = () => {
                                 <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest group-hover:text-gray-600">Platform Fee (50%)</p>
                                 <Wallet className="w-3.5 h-3.5 text-gray-300 group-hover:text-[#8b5cf6]" />
                             </div>
-                            <p className="text-2xl font-black text-gray-900 tracking-tighter">$0</p>
+                            <p className="text-2xl font-black text-gray-900 tracking-tighter">₹{statsData?.financials?.platformFee || 0}</p>
                         </div>
 
                         <div className="bg-gray-50/50 rounded-[20px] p-4 border border-gray-100 hover:bg-white hover:shadow-lg transition-all group">
@@ -239,19 +297,19 @@ const AdminOverview = () => {
                                 <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest group-hover:text-gray-600">Net Earnings</p>
                                 <Wallet className="w-3.5 h-3.5 text-gray-300 group-hover:text-[#8b5cf6]" />
                             </div>
-                            <p className="text-2xl font-black text-gray-900 tracking-tighter">$0</p>
+                            <p className="text-2xl font-black text-gray-900 tracking-tighter">₹{statsData?.financials?.netEarnings || 0}</p>
                         </div>
 
                         <div className="pl-5 border-l border-gray-200/50 flex flex-col justify-between py-1">
                             <div>
                                 <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Status</p>
-                                <span className="inline-block bg-orange-100/80 text-orange-600 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider backdrop-blur-sm">N/A</span>
+                                <span className="inline-block bg-orange-100/80 text-orange-600 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider backdrop-blur-sm">{statsData?.financials?.status || 'Active'}</span>
                             </div>
                             <div className="mt-2">
                                 <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-1">Next Payout</p>
                                 <p className="font-bold text-gray-900 text-sm flex items-center gap-2">
-                                    Pending Sales
-                                    <span className="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+                                    {statsData?.financials?.nextPayout || 'Pending Sales'}
+                                    <span className={`w-1.5 h-1.5 rounded-full ${statsData?.financials?.grossSales > 0 ? 'bg-green-500 animate-pulse' : 'bg-gray-300'}`}></span>
                                 </p>
                             </div>
                         </div>

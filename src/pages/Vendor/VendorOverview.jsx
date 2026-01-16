@@ -22,7 +22,7 @@ const VendorOverview = () => {
         if (showLoading) setLoading(true);
         try {
             // Using a full URL to ensure consistency with backend
-            const response = await axios.get(`http://localhost:5000/api/agents/vendor-users/${userId}`, {
+            const response = await axios.get(`http://localhost:8080/api/agents/vendor-users/${userId}`, {
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
             });
             setUsers(Array.isArray(response.data) ? response.data : []);
@@ -81,15 +81,9 @@ const VendorOverview = () => {
             {/* Header Section */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
                 <div>
-                    <div className="flex items-center gap-3 mb-4">
-                        <div className="px-3 py-1 bg-[#8b5cf6]/10 border border-[#8b5cf6]/20 rounded-full flex items-center gap-2">
-                            <div className="w-1.5 h-1.5 rounded-full bg-[#8b5cf6] animate-pulse" />
-                            <span className="text-[#8b5cf6] text-[9px] font-black tracking-widest uppercase">Live Pulse</span>
-                        </div>
-                        <span className="text-gray-400 text-[9px] font-black uppercase tracking-widest opacity-60">Last synced: {lastRefreshed.toLocaleTimeString()}</span>
-                    </div>
-                    <h1 className="text-5xl md:text-6xl font-black text-gray-900 tracking-tighter mb-4 leading-none">Recent <span className="text-[#8b5cf6]">Connections.</span></h1>
-                    <p className="text-gray-500 font-bold text-lg tracking-tight max-w-xl">Monitor real-time engagement and neural patterns across your entire agent fleet.</p>
+
+                    <h1 className="text-5xl md:text-6xl font-black text-gray-900 tracking-tighter mb-4 leading-none">User <span className="text-[#8b5cf6]">Management</span></h1>
+                    <p className="text-gray-500 font-bold text-lg tracking-tight max-w-xl">View and manage all users subscribed to your agents.</p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-4">
@@ -118,14 +112,10 @@ const VendorOverview = () => {
                 animate={{ opacity: 1, y: 0 }}
                 className="flex flex-wrap items-center gap-6 p-6 bg-white/20 backdrop-blur-2xl rounded-[32px] border border-white/60 shadow-inner"
             >
-                <div className="flex items-center gap-3 text-gray-400 font-black uppercase text-[10px] tracking-widest">
-                    <Filter className="w-4 h-4" /> Filter Protocol:
-                </div>
-
                 <div className="flex flex-wrap gap-4">
                     {/* Agent Filter */}
                     <div className="flex flex-col gap-1.5">
-                        <span className="px-2 text-[9px] font-black text-gray-400 uppercase tracking-widest">Target Agent</span>
+                        <span className="px-2 text-[9px] font-black text-gray-400 uppercase tracking-widest">App Name</span>
                         <select
                             value={filters.agent}
                             onChange={(e) => setFilters({ ...filters, agent: e.target.value })}
@@ -137,7 +127,7 @@ const VendorOverview = () => {
 
                     {/* Plan Filter */}
                     <div className="flex flex-col gap-1.5">
-                        <span className="px-2 text-[9px] font-black text-gray-400 uppercase tracking-widest">Subscription Tier</span>
+                        <span className="px-2 text-[9px] font-black text-gray-400 uppercase tracking-widest">Plan</span>
                         <select
                             value={filters.plan}
                             onChange={(e) => setFilters({ ...filters, plan: e.target.value })}
@@ -149,7 +139,7 @@ const VendorOverview = () => {
 
                     {/* Status Filter */}
                     <div className="flex flex-col gap-1.5">
-                        <span className="px-2 text-[9px] font-black text-gray-400 uppercase tracking-widest">Neural Status</span>
+                        <span className="px-2 text-[9px] font-black text-gray-400 uppercase tracking-widest">Status</span>
                         <select
                             value={filters.status}
                             onChange={(e) => setFilters({ ...filters, status: e.target.value })}
@@ -276,8 +266,8 @@ const VendorOverview = () => {
                                     </td>
                                     <td className="px-6 py-8">
                                         <span className={`inline-flex items-center px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${u.plan === 'Pro' ? 'bg-[#8b5cf6] text-white border-[#8b5cf6] shadow-lg shadow-purple-500/20' :
-                                                u.plan === 'Basic' ? 'bg-white text-gray-900 border-gray-200 shadow-sm' :
-                                                    'bg-gray-100/50 text-gray-500 border-gray-100'
+                                            u.plan === 'Basic' ? 'bg-white text-gray-900 border-gray-200 shadow-sm' :
+                                                'bg-gray-100/50 text-gray-500 border-gray-100'
                                             }`}>
                                             {u.plan}
                                         </span>
@@ -305,11 +295,11 @@ const VendorOverview = () => {
                         <div className="w-24 h-24 bg-white/60 backdrop-blur-md rounded-[32px] flex items-center justify-center mb-8 shadow-glass border border-white">
                             <Users className="w-10 h-10 text-gray-300" />
                         </div>
-                        <h3 className="text-3xl font-black text-gray-900 mb-2 tracking-tighter uppercase">Signal Matrix Empty.</h3>
+                        <h3 className="text-3xl font-black text-gray-900 mb-2 tracking-tighter uppercase">No Users Found</h3>
                         <p className="text-gray-400 font-bold text-base max-w-sm mx-auto leading-relaxed">
                             {searchQuery || filters.agent !== 'all' || filters.plan !== 'all' || filters.status !== 'all'
-                                ? "Protocol check failed: No users matching current filters found in registry."
-                                : "Awaiting initial neural connection. Broadcast your agent's frequency to begin synchronization."
+                                ? "No users match your current filters."
+                                : "You don't have any active users yet."
                             }
                         </p>
                     </div>
@@ -321,7 +311,7 @@ const VendorOverview = () => {
                             <div className="absolute inset-0 border-4 border-[#8b5cf6]/20 border-t-[#8b5cf6] rounded-full animate-spin" />
                             <div className="absolute inset-3 border-4 border-[#d946ef]/20 border-b-[#d946ef] rounded-full animate-spin-reverse" />
                         </div>
-                        <p className="text-[11px] font-black text-[#8b5cf6] uppercase tracking-[0.5em] animate-pulse">Establishing Secure Neural Uplink...</p>
+                        <p className="text-[11px] font-black text-[#8b5cf6] uppercase tracking-[0.5em] animate-pulse">Loading Users...</p>
                     </div>
                 )}
             </motion.div>
@@ -330,4 +320,5 @@ const VendorOverview = () => {
     );
 };
 
+// Force HMR Update
 export default VendorOverview;

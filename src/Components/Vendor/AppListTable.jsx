@@ -37,13 +37,14 @@ const AppListTable = ({ apps, onAppCreated }) => {
 
                     <button
                         onClick={() => setIsModalOpen(true)}
-                        className="px-6 py-3 bg-gray-900 text-white rounded-[20px] text-xs font-black uppercase tracking-widest shadow-lg hover:shadow-xl hover:bg-[#8b5cf6] hover:scale-105 active:scale-95 transition-all flex items-center gap-2 group"
+                        className="px-6 py-3 bg-[#8b5cf6] text-white rounded-[20px] text-xs font-black uppercase tracking-widest shadow-lg shadow-purple-500/30 hover:shadow-xl hover:bg-[#7c3aed] hover:scale-105 active:scale-95 transition-all flex items-center gap-2 group"
                     >
                         <span className="text-lg leading-none mb-0.5">+</span> Create New Agent
                     </button>
                 </div>
 
-                <div className="overflow-x-auto">
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto">
                     <table className="min-w-full text-left border-collapse">
                         <thead className="bg-white/20">
                             <tr>
@@ -86,7 +87,7 @@ const AppListTable = ({ apps, onAppCreated }) => {
                                         </div>
                                     </td>
                                     <td className="px-8 py-6 whitespace-nowrap">
-                                        <StatusBadge status={(app.reviewStatus === 'Pending Review' || app.reviewStatus === 'Rejected') ? app.reviewStatus : app.status} />
+                                        <StatusBadge status={app.deletionStatus === 'Pending' ? 'Pending Deletion' : (app.reviewStatus === 'Pending Review' || app.reviewStatus === 'Rejected') ? app.reviewStatus : app.status} />
                                     </td>
                                     <td className="px-8 py-6 whitespace-nowrap text-right">
                                         <div className="flex items-center justify-end gap-3">
@@ -112,6 +113,42 @@ const AppListTable = ({ apps, onAppCreated }) => {
                             ))}
                         </tbody>
                     </table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="md:hidden divide-y divide-white/40">
+                    {apps.map((app, index) => (
+                        <div
+                            key={app._id || app.id}
+                            className="p-6 transition-all active:bg-white/40"
+                            onClick={() => navigate(`/vendor/apps/${app._id || app.id}`)}
+                        >
+                            <div className="flex items-start justify-between mb-4">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-14 h-14 rounded-2xl bg-white border border-white/60 shadow-md flex items-center justify-center overflow-hidden shrink-0">
+                                        {app.avatar ? (
+                                            <img src={app.avatar} alt="icon" className="w-full h-full object-cover" />
+                                        ) : (
+                                            <Mic className="w-6 h-6 text-gray-400" />
+                                        )}
+                                    </div>
+                                    <div>
+                                        <div className="text-base font-black text-gray-900">{app.agentName || app.name}</div>
+                                        <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">ID: {(app._id || app.id).slice(-8)}</div>
+                                    </div>
+                                </div>
+                                <ChevronRight className="w-5 h-5 text-gray-300 mt-2" />
+                            </div>
+
+                            <div className="flex items-center justify-between mt-6 pt-4 border-t border-white/40">
+                                <StatusBadge status={(app.reviewStatus === 'Pending Review' || app.reviewStatus === 'Rejected') ? app.reviewStatus : app.status} />
+                                <div className="flex items-center gap-1 bg-amber-50 px-3 py-1.5 rounded-full">
+                                    <Star size={12} className="text-amber-400 fill-amber-400" />
+                                    <span className="text-xs font-black text-amber-900">{app.rating ? app.rating.toFixed(1) : '0.0'}</span>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
                 </div>
 
                 {apps.length === 0 && (

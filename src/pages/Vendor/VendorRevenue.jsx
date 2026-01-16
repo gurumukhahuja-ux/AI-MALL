@@ -25,7 +25,7 @@ const VendorRevenue = () => {
         const fetchRevenue = async () => {
             if (!userId) return;
             try {
-                const response = await axios.get(`http://localhost:5000/api/agents/vendor/${userId}/transactions`);
+                const response = await axios.get(`http://localhost:8080/api/agents/vendor/${userId}/transactions`);
                 setStats(response.data.summary);
                 setTransactions(response.data.transactions);
             } catch (error) {

@@ -110,6 +110,8 @@ const Notifications = () => {
             return !isVendorNotification;
         });
 
+    const [expandedId, setExpandedId] = useState(null);
+
     return (
         <div className="p-4 md:p-8 lg:p-12 h-screen overflow-y-auto no-scrollbar bg-transparent relative">
             {/* Decorative Background Glows */}
@@ -151,8 +153,9 @@ const Notifications = () => {
                                 exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
                                 transition={{ delay: idx * 0.1, type: "spring", stiffness: 100 }}
                                 key={notif._id}
-                                className={`bg-white/40 backdrop-blur-3xl p-6 md:p-10 rounded-[40px] md:rounded-[56px] border transition-all flex flex-col md:flex-row items-center md:items-start gap-6 md:gap-10 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.02)] hover:shadow-[0_40px_80px_-20px_rgba(139,92,246,0.15)] group relative overflow-hidden ${!notif.isRead ? 'border-[#8b5cf6]/40 ring-1 ring-[#8b5cf6]/10' : 'border-white/60'
-                                    }`}
+                                onClick={() => setExpandedId(expandedId === notif._id ? null : notif._id)}
+                                className={`bg-white/40 backdrop-blur-3xl p-6 md:p-10 rounded-[40px] md:rounded-[56px] border transition-all flex flex-col md:flex-row items-center md:items-start gap-6 md:gap-10 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.02)] hover:shadow-[0_40px_80px_-20px_rgba(139,92,246,0.15)] group relative overflow-hidden cursor-pointer ${!notif.isRead ? 'border-[#8b5cf6]/40 ring-1 ring-[#8b5cf6]/10' : 'border-white/60'
+                                    } ${expandedId === notif._id ? 'md:ring-2 md:ring-[#8b5cf6]/20 shadow-2xl' : ''}`}
                             >
                                 {!notif.isRead && (
                                     <div className="absolute top-0 left-0 w-2 h-full bg-[#8b5cf6]" />
@@ -187,7 +190,7 @@ const Notifications = () => {
                                         </div>
                                     </div>
 
-                                    <p className={`text-base md:text-lg font-bold leading-relaxed max-w-3xl text-center md:text-left ${!notif.isRead ? 'text-gray-600' : 'text-gray-400'}`}>
+                                    <p className={`text-base md:text-lg font-bold leading-relaxed max-w-3xl text-center md:text-left transition-all duration-500 ${!notif.isRead ? 'text-gray-600' : 'text-gray-400'} ${expandedId === notif._id ? '' : 'line-clamp-1 md:line-clamp-2'}`}>
                                         {notif.message}
                                     </p>
 

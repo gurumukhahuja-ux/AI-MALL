@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Sparkles, AlertCircle, CheckCircle, Loader2, ChevronDown, Check } from 'lucide-react';
+import { X, Sparkles, AlertCircle, CheckCircle, Loader2, ChevronDown, Check, Plus, Upload } from 'lucide-react';
 import axios from 'axios';
 import { useNavigate } from 'react-router';
-import PricingConfigModal from './PricingConfigModal';
+import { apis } from '../../types';
 
 // Custom Dropdown Component
 const CustomSelect = ({ label, name, value, options, onChange, placeholder = "Select option" }) => {
@@ -28,7 +28,7 @@ const CustomSelect = ({ label, name, value, options, onChange, placeholder = "Se
     const selectedLabel = options.find(opt => opt.value === value)?.label || value || placeholder;
 
     return (
-        <div className="space-y-3" ref={containerRef}>
+        <div className="space-y-3 relative" ref={containerRef} style={{ zIndex: isOpen ? 100 : 1 }}>
             <div className="relative">
                 <button
                     type="button"
@@ -41,26 +41,34 @@ const CustomSelect = ({ label, name, value, options, onChange, placeholder = "Se
                     <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-300 ${isOpen ? 'rotate-180 text-purple-600' : ''}`} />
                 </button>
 
-                {isOpen && (
-                    <div className="absolute z-[100] w-full mt-3 bg-white/80 backdrop-blur-2xl border border-white/60 rounded-[24px] shadow-[0_20px_40px_-10px_rgba(0,0,0,0.1)] overflow-hidden animate-in fade-in zoom-in-95 duration-300">
-                        <div className="p-2 space-y-1">
-                            {options.map((option) => (
-                                <button
-                                    key={option.value}
-                                    type="button"
-                                    onClick={() => handleSelect(option.value)}
-                                    className={`w-full flex items-center justify-between px-4 py-3 text-xs font-black uppercase tracking-widest rounded-xl transition-all ${value === option.value
-                                        ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/20'
-                                        : 'text-gray-500 hover:bg-white hover:text-purple-600'
-                                        }`}
-                                >
-                                    <span>{option.label}</span>
-                                    {value === option.value && <Check className="w-4 h-4" strokeWidth={4} />}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                )}
+                <AnimatePresence>
+                    {isOpen && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                            transition={{ duration: 0.2, ease: "easeOut" }}
+                            className="absolute z-[100] w-full mt-3 bg-white/95 backdrop-blur-2xl border border-white/60 rounded-[24px] shadow-[0_25px_50px_-12px_rgba(0,0,0,0.15)] overflow-hidden"
+                        >
+                            <div className="p-2 space-y-1">
+                                {options.map((option) => (
+                                    <button
+                                        key={option.value}
+                                        type="button"
+                                        onClick={() => handleSelect(option.value)}
+                                        className={`w-full flex items-center justify-between px-4 py-3 text-xs font-black uppercase tracking-widest rounded-xl transition-all ${value === option.value
+                                            ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/20'
+                                            : 'text-gray-500 hover:bg-white hover:text-purple-600'
+                                            }`}
+                                    >
+                                        <span>{option.label}</span>
+                                        {value === option.value && <Check className="w-4 h-4" strokeWidth={4} />}
+                                    </button>
+                                ))}
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
         </div>
     );
@@ -80,8 +88,6 @@ const NewAppModal = ({ isOpen, onClose, onAppCreated }) => {
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState(null);
     const [error, setError] = useState(false);
-    const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
-    const [pricingConfig, setPricingConfig] = useState(null);
 
     const categories = [
         { value: 'Business OS', label: 'Business OS' },
@@ -185,11 +191,10 @@ const NewAppModal = ({ isOpen, onClose, onAppCreated }) => {
                 ...formData,
                 vendorId: userId,
                 status: 'Draft',
-                health: 'All Good',
-                pricingConfig: pricingConfig
+                health: 'All Good'
             };
 
-            const response = await axios.post('http://localhost:5000/api/agents', payload, {
+            const response = await axios.post(apis.agents, payload, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
@@ -253,15 +258,14 @@ const NewAppModal = ({ isOpen, onClose, onAppCreated }) => {
             <div className="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-purple-500/10 rounded-full blur-[180px] pointer-events-none animate-pulse duration-[10s]" />
             <div className="absolute bottom-1/4 right-1/4 w-[600px] h-[600px] bg-blue-500/10 rounded-full blur-[180px] pointer-events-none animate-pulse duration-[8s]" />
 
-            <div className="bg-white/70 backdrop-blur-3xl border border-white/40 rounded-[48px] max-w-2xl w-full my-auto shadow-[0_45px_120px_-20px_rgba(0,0,0,0.35)] animate-in zoom-in-95 duration-500 relative flex flex-col overflow-hidden">
+            <div className="bg-[#eef2ff]/80 backdrop-blur-3xl border border-blue-200/50 rounded-[48px] max-w-2xl w-full my-auto shadow-[0_45px_120px_-20px_rgba(0,0,0,0.35)] animate-in zoom-in-95 duration-500 relative flex flex-col overflow-hidden">
 
                 {/* Header Section - Premium Glassmorphic */}
-                <div className="px-10 py-10 border-b border-white/30 flex items-center justify-between sticky top-0 bg-white/20 backdrop-blur-2xl z-20">
+                <div className="px-10 py-10 border-b border-blue-200/50 flex items-center justify-between sticky top-0 bg-blue-50/40 backdrop-blur-2xl z-20">
                     <div className="flex items-center space-x-7">
                         <div className="relative">
-                            <div className="absolute inset-0 bg-gradient-to-br from-[#8b5cf6] to-[#d946ef] blur-[30px] opacity-50 animate-pulse" />
-                            <div className="relative p-5 bg-gradient-to-br from-[#8b5cf6] to-[#d946ef] rounded-[28px] shadow-[0_12px_40px_-8px_rgba(139,92,246,0.5)] ring-4 ring-white/70 flex items-center justify-center transition-transform hover:scale-110 duration-500">
-                                <Sparkles className="w-10 h-10 text-white drop-shadow-md" />
+                            <div className="relative p-6 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 rounded-[32px] shadow-[0_20px_40px_-10px_rgba(37,99,235,0.4)] ring-4 ring-white flex items-center justify-center transition-transform hover:scale-110 duration-500">
+                                <Sparkles className="w-10 h-10 text-white drop-shadow-[0_4px_8px_rgba(0,0,0,0.2)]" strokeWidth={2.5} />
                             </div>
                         </div>
                         <div>
@@ -296,22 +300,22 @@ const NewAppModal = ({ isOpen, onClose, onAppCreated }) => {
 
                             {/* Section 1: Agent Profile Glass Card */}
                             <motion.div
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.1 }}
+                                initial={{ opacity: 0, y: 50, scale: 0.95 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                transition={{ delay: 0.1, type: "spring", stiffness: 100 }}
                                 whileHover={{ y: -4, shadow: "0 20px 40px rgba(139, 92, 246, 0.08)" }}
-                                className="space-y-8 bg-white/40 backdrop-blur-md p-9 rounded-[40px] border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.03)] hover:border-purple-200/50 transition-all duration-500 group relative"
+                                className="space-y-5 bg-white/60 backdrop-blur-md p-6 rounded-[24px] border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.03)] hover:border-purple-200/50 transition-all duration-500 group relative z-[30]"
                             >
-                                <div className="absolute inset-0 rounded-[40px] bg-gradient-to-br from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-                                <div className="space-y-5 relative">
-                                    <div className="flex items-center gap-3 mb-2">
-                                        <div className="w-2 h-5 bg-[#8b5cf6] rounded-full shadow-[0_0_15px_rgba(139,92,246,0.3)]" />
-                                        <h3 className="text-xs font-black uppercase tracking-[0.25em] text-[#8b5cf6]/70">Agent Profile</h3>
+                                <div className="absolute inset-0 rounded-[24px] bg-gradient-to-br from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+                                <div className="space-y-4 relative">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <div className="w-1.5 h-4 bg-[#8b5cf6] rounded-full shadow-[0_0_15px_rgba(139,92,246,0.3)]" />
+                                        <h3 className="text-[10px] font-black uppercase tracking-[0.25em] text-[#8b5cf6]/70">Agent Profile</h3>
                                     </div>
 
                                     {/* Agent Name */}
-                                    <div className="space-y-3">
-                                        <label className="text-[11px] font-black text-gray-900 uppercase tracking-[0.15em] ml-1">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-gray-900 uppercase tracking-[0.15em] ml-1">
                                             Agent Name <span className="text-purple-500">*</span>
                                         </label>
                                         <input
@@ -320,14 +324,14 @@ const NewAppModal = ({ isOpen, onClose, onAppCreated }) => {
                                             value={formData.agentName}
                                             onChange={handleChange}
                                             placeholder="e.g., AI Content Strategist"
-                                            className="w-full bg-white/60 backdrop-blur-sm border-2 border-white/40 rounded-2xl py-5 px-6 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-8 focus:ring-purple-500/10 focus:border-purple-400 focus:bg-white transition-all font-bold text-lg tracking-tight shadow-sm"
+                                            className="w-full bg-white/60 backdrop-blur-sm border-2 border-white/40 rounded-xl py-3 px-4 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-purple-500/10 focus:border-purple-400 focus:bg-white transition-all font-bold text-sm tracking-tight shadow-sm"
                                             required
                                         />
                                     </div>
 
                                     {/* Agent Description */}
-                                    <div className="space-y-3">
-                                        <label className="text-[11px] font-black text-gray-900 uppercase tracking-[0.15em] ml-1">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-gray-900 uppercase tracking-[0.15em] ml-1">
                                             Agent Description <span className="text-purple-500">*</span>
                                         </label>
                                         <textarea
@@ -335,11 +339,11 @@ const NewAppModal = ({ isOpen, onClose, onAppCreated }) => {
                                             value={formData.description}
                                             onChange={handleChange}
                                             placeholder="Describe what your agent does, its capabilities, and use cases"
-                                            rows={5}
-                                            className="w-full bg-white/60 backdrop-blur-sm border-2 border-white/40 rounded-2xl py-5 px-6 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-8 focus:ring-purple-500/10 focus:border-purple-400 focus:bg-white transition-all resize-none font-bold tracking-tight shadow-sm"
+                                            rows={4}
+                                            className="w-full bg-white/60 backdrop-blur-sm border-2 border-white/40 rounded-xl py-3 px-4 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-purple-500/10 focus:border-purple-400 focus:bg-white transition-all resize-none font-bold text-sm tracking-tight shadow-sm"
                                             required
                                         />
-                                        <p className="text-[10px] font-bold text-gray-500 ml-1 leading-relaxed italic opacity-80">
+                                        <p className="text-[9px] font-bold text-gray-500 ml-1 leading-relaxed italic opacity-80">
                                             Provide deep context about your agent's primary functions and specialized expertise.
                                         </p>
                                     </div>
@@ -348,23 +352,23 @@ const NewAppModal = ({ isOpen, onClose, onAppCreated }) => {
 
                             {/* Section 2: Core Configuration Glass Card */}
                             <motion.div
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.2 }}
+                                initial={{ opacity: 0, y: 50, scale: 0.95 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                transition={{ delay: 0.2, type: "spring", stiffness: 100 }}
                                 whileHover={{ y: -4, shadow: "0 20px 40px rgba(139, 92, 246, 0.08)" }}
-                                className="space-y-8 bg-white/40 backdrop-blur-md p-9 rounded-[40px] border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.03)] hover:border-purple-200/50 transition-all duration-500 group relative"
+                                className="space-y-5 bg-white/60 backdrop-blur-md p-6 rounded-[24px] border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.03)] hover:border-purple-200/50 transition-all duration-500 group relative z-[20]"
                             >
-                                <div className="absolute inset-0 rounded-[40px] bg-gradient-to-br from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-                                <div className="space-y-5 relative">
-                                    <div className="flex items-center gap-3 mb-2">
-                                        <div className="w-2 h-5 bg-[#8b5cf6] rounded-full shadow-[0_0_15px_rgba(139,92,246,0.3)]" />
-                                        <h3 className="text-xs font-black uppercase tracking-[0.25em] text-[#8b5cf6]/70">Core Configuration</h3>
+                                <div className="absolute inset-0 rounded-[24px] bg-gradient-to-br from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+                                <div className="space-y-4 relative">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <div className="w-1.5 h-4 bg-[#8b5cf6] rounded-full shadow-[0_0_15px_rgba(139,92,246,0.3)]" />
+                                        <h3 className="text-[10px] font-black uppercase tracking-[0.25em] text-[#8b5cf6]/70">Core Configuration</h3>
                                     </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 h-full">
+                                    <div className="space-y-5">
                                         {/* Category Selection */}
-                                        <div className="space-y-3">
-                                            <label className="text-[11px] font-black text-gray-900 uppercase tracking-[0.15em] ml-1">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-gray-900 uppercase tracking-[0.15em] ml-1">
                                                 Agent Category <span className="text-purple-500">*</span>
                                             </label>
                                             <CustomSelect
@@ -375,41 +379,11 @@ const NewAppModal = ({ isOpen, onClose, onAppCreated }) => {
                                                 placeholder="Select Category"
                                             />
                                         </div>
-
-                                        {/* Monetization / Pricing */}
-                                        <div className="space-y-3">
-                                            <label className="text-[11px] font-black text-gray-900 uppercase tracking-[0.15em] ml-1">
-                                                Subscription Model
-                                            </label>
-                                            <motion.button
-                                                type="button"
-                                                whileTap={{ scale: 0.95 }}
-                                                onClick={() => setIsPricingModalOpen(true)}
-                                                className={`w-full relative overflow-hidden rounded-[22px] transition-all duration-500 group h-[60px] border-2 shadow-sm ${pricingConfig
-                                                    ? 'bg-purple-100/40 border-purple-200 backdrop-blur-sm'
-                                                    : 'bg-gray-900 border-gray-800 hover:bg-black hover:shadow-[0_15px_30px_-5px_rgba(139,92,246,0.3)]'
-                                                    }`}
-                                            >
-                                                <div className="relative h-full px-5 flex items-center justify-between">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className={`p-1.5 rounded-lg transition-all ${pricingConfig ? 'bg-purple-500 text-white shadow-[0_0_15px_rgba(139,92,246,0.5)]' : 'bg-white/10 text-white backdrop-blur-md group-hover:scale-110'}`}>
-                                                            {pricingConfig ? <Check size={18} strokeWidth={4} /> : <Sparkles size={18} className="animate-pulse" />}
-                                                        </div>
-                                                        <div className="text-left">
-                                                            <span className={`block text-[13px] font-black tracking-tight ${pricingConfig ? 'text-purple-800' : 'text-white'}`}>
-                                                                {pricingConfig ? 'Pricing Active' : 'Enter Price'}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                    <ChevronDown size={16} className={`transition-all ${pricingConfig ? 'text-purple-600' : 'text-gray-500 group-hover:text-white group-hover:translate-x-1'} -rotate-90`} />
-                                                </div>
-                                            </motion.button>
-                                        </div>
                                     </div>
 
                                     {/* Agent Live URL */}
-                                    <div className="space-y-3">
-                                        <label className="text-[11px] font-black text-gray-900 uppercase tracking-[0.15em] ml-1">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-gray-900 uppercase tracking-[0.15em] ml-1">
                                             Agent Live URL
                                         </label>
                                         <input
@@ -418,7 +392,7 @@ const NewAppModal = ({ isOpen, onClose, onAppCreated }) => {
                                             value={formData.url}
                                             onChange={handleChange}
                                             placeholder="https://your-agent.api"
-                                            className="w-full bg-white/60 backdrop-blur-sm border-2 border-white/40 rounded-2xl py-4.5 px-6 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-8 focus:ring-purple-500/10 focus:border-purple-400 focus:bg-white transition-all font-bold text-lg tracking-tight shadow-sm"
+                                            className="w-full bg-white/60 backdrop-blur-sm border-2 border-white/40 rounded-xl py-3 px-4 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-purple-500/10 focus:border-purple-400 focus:bg-white transition-all font-bold text-sm tracking-tight shadow-sm"
                                         />
                                     </div>
                                 </div>
@@ -426,35 +400,35 @@ const NewAppModal = ({ isOpen, onClose, onAppCreated }) => {
 
                             {/* Section 3: Visual Identity & Logo Glass Card */}
                             <motion.div
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.3 }}
+                                initial={{ opacity: 0, y: 50, scale: 0.95 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                transition={{ delay: 0.3, type: "spring", stiffness: 100 }}
                                 whileHover={{ y: -4, shadow: "0 20px 40px rgba(139, 92, 246, 0.08)" }}
-                                className="space-y-8 bg-white/40 backdrop-blur-md p-9 rounded-[40px] border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.03)] hover:border-purple-200/50 transition-all duration-500 group mb-10 relative"
+                                className="space-y-5 bg-white/60 backdrop-blur-md p-6 rounded-[24px] border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.03)] hover:border-purple-200/50 transition-all duration-500 group mb-6 relative z-[10]"
                             >
-                                <div className="absolute inset-0 rounded-[40px] bg-gradient-to-br from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-                                <div className="space-y-6 relative">
-                                    <div className="flex items-center gap-3 mb-2">
-                                        <div className="w-2 h-5 bg-[#8b5cf6] rounded-full shadow-[0_0_15px_rgba(139,92,246,0.3)]" />
-                                        <h3 className="text-xs font-black uppercase tracking-[0.25em] text-[#8b5cf6]/70">Visual Identity</h3>
+                                <div className="absolute inset-0 rounded-[24px] bg-gradient-to-br from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+                                <div className="space-y-4 relative">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <div className="w-1.5 h-4 bg-[#8b5cf6] rounded-full shadow-[0_0_15px_rgba(139,92,246,0.3)]" />
+                                        <h3 className="text-[10px] font-black uppercase tracking-[0.25em] text-[#8b5cf6]/70">Agent Logo</h3>
                                     </div>
 
-                                    <div className="flex flex-col md:flex-row gap-12 items-center md:items-start">
+                                    <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
                                         {/* Avatar Upload Container */}
                                         <div className="relative group shrink-0">
                                             <motion.div
                                                 onClick={() => fileInputRef.current?.click()}
-                                                whileHover={{ scale: 1.02, shadow: "0 25px 50px -12px rgba(139, 92, 246, 0.25)" }}
-                                                className="w-[140px] h-[200px] bg-white/60 backdrop-blur-sm border-2 border-white/50 border-dashed rounded-[36px] flex items-center justify-center cursor-pointer hover:bg-white hover:border-purple-300 transition-all duration-500 overflow-hidden shadow-sm active:scale-95"
+                                                whileHover={{ scale: 1.02, shadow: "0 15px 30px -10px rgba(139, 92, 246, 0.25)" }}
+                                                className={`w-[100px] h-[140px] ${formData.avatar ? 'bg-white border-solid shadow-xl' : 'bg-white/60 backdrop-blur-sm border-dashed'} border-2 border-white shadow-sm rounded-[24px] flex items-center justify-center cursor-pointer hover:bg-white hover:border-white/80 transition-all duration-500 overflow-hidden active:scale-95`}
                                             >
                                                 {formData.avatar ? (
                                                     <img src={formData.avatar} alt="Icon" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                                                 ) : (
                                                     <div className="text-center group-hover:scale-110 transition-transform duration-500">
-                                                        <div className="p-5 bg-purple-500/10 rounded-2xl mb-4 text-[#8b5cf6] group-hover:bg-[#8b5cf6] group-hover:text-white transition-all duration-500 backdrop-blur-sm shadow-sm">
-                                                            <Loader2 size={28} className="animate-spin-slow" />
+                                                        <div className="p-3 bg-purple-500/10 rounded-xl mb-2 text-[#8b5cf6] group-hover:bg-[#8b5cf6] group-hover:text-white transition-all duration-500 backdrop-blur-sm shadow-sm ring-1 ring-white/10">
+                                                            <Plus size={20} strokeWidth={3} />
                                                         </div>
-                                                        <div className="text-[10px] font-black text-gray-500 group-hover:text-[#8b5cf6] tracking-widest uppercase">Upload Logo</div>
+                                                        <div className="text-[8px] font-black text-gray-500 group-hover:text-[#8b5cf6] tracking-widest uppercase">Logo</div>
                                                     </div>
                                                 )}
                                             </motion.div>
@@ -472,21 +446,21 @@ const NewAppModal = ({ isOpen, onClose, onAppCreated }) => {
                                                         e.stopPropagation();
                                                         setFormData({ ...formData, avatar: null });
                                                     }}
-                                                    className="absolute -top-4 -right-4 p-3 bg-red-500 text-white rounded-full hover:bg-black shadow-2xl shadow-red-500/40 transition-all hover:scale-110 z-10"
+                                                    className="absolute -top-3 -right-3 p-2 bg-red-500 text-white rounded-full hover:bg-black shadow-lg shadow-red-500/40 transition-all hover:scale-110 z-10"
                                                 >
-                                                    <X size={16} strokeWidth={3} />
+                                                    <X size={12} strokeWidth={3} />
                                                 </button>
                                             )}
                                         </div>
 
-                                        <div className="flex-1 space-y-5 pt-3">
-                                            <h4 className="text-lg font-black text-gray-900 uppercase tracking-tight">Agent Avatar</h4>
-                                            <p className="text-xs text-gray-600 font-bold leading-relaxed tracking-tight group-hover:text-gray-800 transition-colors">
-                                                Provide a visual representation for your agent. Recommended size: <span className="text-[#8b5cf6] font-black underline decoration-2 underline-offset-4">800x1200px</span>.
+                                        <div className="flex-1 space-y-3 pt-1">
+                                            <h4 className="text-sm font-black text-gray-900 uppercase tracking-tight">Logo</h4>
+                                            <p className="text-[10px] text-gray-600 font-bold leading-relaxed tracking-tight group-hover:text-gray-800 transition-colors">
+                                                Recommended size: <span className="text-[#8b5cf6] font-black underline decoration-2 underline-offset-4">800x1200px</span>.
                                             </p>
-                                            <div className="flex flex-wrap gap-3 pt-2">
-                                                {["Minimalist", "PNG/JPG", "Max 5MB"].map(tag => (
-                                                    <span key={tag} className="px-4 py-1.5 bg-white/60 backdrop-blur-sm border border-white/50 rounded-full text-[10px] font-black text-gray-600 uppercase tracking-widest shadow-sm hover:border-[#8b5cf6]/30 transition-colors">
+                                            <div className="flex flex-wrap gap-2 pt-1">
+                                                {["Professional", "PNG/JPG", "Max 5MB"].map(tag => (
+                                                    <span key={tag} className="px-3 py-1 bg-white/60 backdrop-blur-sm border border-white/50 rounded-full text-[9px] font-black text-gray-600 uppercase tracking-widest shadow-sm hover:border-[#8b5cf6]/30 transition-colors">
                                                         {tag}
                                                     </span>
                                                 ))}
@@ -503,23 +477,23 @@ const NewAppModal = ({ isOpen, onClose, onAppCreated }) => {
                 <div className="p-10 bg-white/40 backdrop-blur-3xl border-t border-white/40 flex items-center justify-between gap-8 z-20 shadow-[0_-25px_60px_rgba(0,0,0,0.03)] sm:flex-row flex-col-reverse">
                     <motion.button
                         type="button"
-                        whileHover={{ x: -4 }}
+                        whileHover={{ x: -4, scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         onClick={onClose}
-                        className="px-10 py-5 text-[11px] font-black uppercase tracking-[0.25em] text-gray-500 hover:text-gray-900 transition-all active:scale-95 flex items-center gap-2 group"
+                        className="px-10 py-5 text-[12px] font-black uppercase tracking-[0.2em] text-red-600 bg-red-100/50 hover:bg-red-100 border-2 border-red-200 rounded-[24px] transition-all active:scale-95 flex items-center gap-3 group shadow-md"
                     >
-                        <span className="w-1.5 h-1.5 bg-gray-300 rounded-full group-hover:bg-gray-900 transition-colors" />
+                        <X className="w-5 h-5 text-red-500" />
                         Cancel
                     </motion.button>
                     <motion.button
                         type="button"
-                        whileHover={{ scale: 1.02, y: -2, shadow: "0 25px 50px -12px rgba(124, 58, 237, 0.6)" }}
+                        whileHover={{ scale: 1.02, y: -2, shadow: "0 25px 50px -12px rgba(59, 130, 246, 0.7)" }}
                         whileTap={{ scale: 0.98 }}
                         onClick={handleSubmit}
                         disabled={loading || !formData.agentName || !formData.description}
-                        className={`px-16 py-5 rounded-[28px] text-[11px] font-black uppercase tracking-[0.25em] transition-all duration-300 flex items-center gap-4 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed sm:w-auto w-full justify-center ${pricingConfig?.selectedPlans?.length > 0 || formData.agentName
-                            ? 'bg-gradient-to-r from-[#7c3aed] to-[#c026d3] text-white shadow-[0_20px_40px_-10px_rgba(124,58,237,0.5)]'
-                            : 'bg-white/30 border-2 border-white/50 text-gray-400 backdrop-blur-md shadow-inner'
+                        className={`px-20 py-5 rounded-[28px] text-[12px] font-black uppercase tracking-[0.25em] transition-all duration-300 flex items-center gap-4 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed sm:w-auto w-full justify-center ${formData.agentName && formData.description
+                            ? 'bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-800 text-white shadow-[0_20px_50px_-10px_rgba(37,99,235,0.6)]'
+                            : 'bg-blue-100/50 border-2 border-blue-400 text-blue-700 backdrop-blur-md shadow-sm'
                             }`}
                     >
                         {loading ? (
@@ -537,15 +511,6 @@ const NewAppModal = ({ isOpen, onClose, onAppCreated }) => {
                 </div>
             </div>
 
-            <PricingConfigModal
-                isOpen={isPricingModalOpen}
-                onClose={() => setIsPricingModalOpen(false)}
-                onSave={(data) => {
-                    setPricingConfig(data);
-                    setFormData({ ...formData, pricingModel: 'subscription' });
-                }}
-                initialData={pricingConfig}
-            />
         </div>
     );
 };

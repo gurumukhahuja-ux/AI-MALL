@@ -9,6 +9,7 @@ const AppDetails = ({ app, onBack, onDelete, onUpdate, isAdmin: propsIsAdmin }) 
     const [reviewStatus, setReviewStatus] = useState(app ? (app.reviewStatus || 'Draft') : 'Draft');
     const [isUpdating, setIsUpdating] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [deleteError, setDeleteError] = useState('');
 
     const userData = getUserData();
     const isAdmin = propsIsAdmin !== undefined ? propsIsAdmin : (userData?.role === 'admin');
@@ -44,16 +45,18 @@ const AppDetails = ({ app, onBack, onDelete, onUpdate, isAdmin: propsIsAdmin }) 
     };
 
     const handleDelete = async () => {
-        if (!window.confirm("Are you sure you want to delete this agent? This action cannot be undone.")) return;
+        if (!window.confirm(`Are you sure you want to delete "${app.name || app.agentName}"? This will permanently remove all associated data and cannot be undone.`)) return;
 
         try {
             setIsDeleting(true);
-            const id = app._id || app.id;
-            await apiService.deleteAgent(id);
+            setDeleteError('');
+            await apiService.deleteAgent(app._id || app.id);
             if (onDelete) onDelete();
         } catch (error) {
             console.error("Failed to delete app:", error);
-            alert("Failed to delete agent. Access denied or server error.");
+            const msg = error.response?.data?.error || "Failed to delete agent. Access denied or server error.";
+            setDeleteError(msg);
+            alert(msg);
         } finally {
             setIsDeleting(false);
         }
@@ -198,7 +201,7 @@ const AppDetails = ({ app, onBack, onDelete, onUpdate, isAdmin: propsIsAdmin }) 
                                     <span className="text-[11px] font-bold text-gray-600 uppercase tracking-wider">Monthly Plan</span>
                                 </div>
                                 <span className="text-sm font-black text-gray-900">
-                                    {app.pricing?.plans?.find(p => p.billingCycle === 'monthly')?.amount ? `$${app.pricing.plans.find(p => p.billingCycle === 'monthly').amount}` : 'Free'}
+                                    {app.pricing?.plans?.find(p => p.billingCycle === 'monthly')?.amount ? `₹${app.pricing.plans.find(p => p.billingCycle === 'monthly').amount}` : 'Free'}
                                 </span>
                             </div>
 
@@ -209,7 +212,7 @@ const AppDetails = ({ app, onBack, onDelete, onUpdate, isAdmin: propsIsAdmin }) 
                                     <span className="text-[11px] font-bold text-gray-600 uppercase tracking-wider">Yearly Plan</span>
                                 </div>
                                 <span className="text-sm font-black text-gray-900">
-                                    {app.pricing?.plans?.find(p => p.billingCycle === 'yearly')?.amount ? `$${app.pricing.plans.find(p => p.billingCycle === 'yearly').amount}` : 'Free'}
+                                    {app.pricing?.plans?.find(p => p.billingCycle === 'yearly')?.amount ? `₹${app.pricing.plans.find(p => p.billingCycle === 'yearly').amount}` : 'Free'}
                                 </span>
                             </div>
 

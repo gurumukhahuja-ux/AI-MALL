@@ -18,6 +18,7 @@ export const LanguageProvider = ({ children }) => {
             updates: 'Updates',
             logOut: 'Log Out',
             helpFaq: 'Help & FAQ',
+            adminSupport: 'Admin Support',
             // Add other keys as needed based on Sidebar.jsx usage
         },
         // Add other languages here

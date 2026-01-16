@@ -59,7 +59,7 @@ const MyAgents = () => {
     };
 
     return (
-        <div className="flex-1 overflow-y-auto p-8 lg:p-12 no-scrollbar bg-transparent relative">
+        <div className="flex-1 overflow-y-auto px-6 py-8 md:p-8 lg:p-12 no-scrollbar bg-transparent relative">
             {/* Decorative Background Glows */}
             <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
                 <div className="absolute top-[20%] right-[-10%] w-[500px] h-[500px] bg-[#8b5cf6]/5 rounded-full blur-[120px] animate-pulse" />
@@ -67,20 +67,20 @@ const MyAgents = () => {
             </div>
 
             {/* Header Section */}
-            <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-10 mb-20 relative z-10">
-                <div className="space-y-4">
-                    <h1 className="text-5xl lg:text-7xl font-black text-gray-900 tracking-tighter leading-none">
+            <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-12 md:mb-20 relative z-10">
+                <div className="space-y-2 md:space-y-4">
+                    <h1 className="text-4xl md:text-5xl lg:text-7xl font-black text-gray-900 tracking-tighter leading-tight">
                         My <span className="text-[#8b5cf6]">Agents.</span>
                     </h1>
-                    <p className="text-gray-400 font-bold text-xl tracking-tight max-w-xl opacity-70">
+                    <p className="text-gray-400 font-bold text-lg md:text-xl tracking-tight max-w-xl opacity-70 leading-snug">
                         Manage your personalized AI assistants.
                     </p>
                 </div>
 
-                <div className="flex items-center gap-6 w-full justify-center md:w-auto">
+                <div className="flex items-center gap-6 w-full md:w-auto">
                     <button
                         onClick={() => navigate(AppRoute.MARKETPLACE)}
-                        className="px-12 py-6 bg-gray-900 text-white font-black rounded-[32px] shadow-2xl transition-all hover:bg-[#8b5cf6] hover:scale-105 active:scale-95 uppercase text-xs tracking-[0.3em] flex items-center gap-4 group"
+                        className="w-full md:w-auto px-8 md:px-12 py-5 md:py-6 bg-gray-900 text-white font-black rounded-[24px] md:rounded-[32px] shadow-2xl transition-all hover:bg-[#8b5cf6] hover:scale-105 active:scale-95 uppercase text-[10px] md:text-xs tracking-[0.3em] flex items-center justify-center gap-3 md:gap-4 group"
                     >
                         <Zap className="w-5 h-5 group-hover:rotate-12 transition-transform" />
                         Acquire New Agent
@@ -100,7 +100,7 @@ const MyAgents = () => {
                     <p className="text-[10px] font-black text-[#8b5cf6] uppercase tracking-[0.5em] animate-pulse">Syncing Core Registry...</p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 relative z-10">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-10 relative z-10">
                     <AnimatePresence mode="popLayout">
                         {/* Agents Grid */}
                         {agents.map((agent, index) => (
@@ -110,41 +110,41 @@ const MyAgents = () => {
                                 initial={{ opacity: 0, y: 30 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: index * 0.05 }}
-                                whileHover={{ y: -15 }}
-                                className="bg-white/40 backdrop-blur-3xl border border-white/80 rounded-[56px] p-10 shadow-[0_20px_40px_-20px_rgba(0,0,0,0.05)] hover:shadow-[0_40px_80px_-20px_rgba(139,92,246,0.15)] transition-all duration-700 group relative overflow-hidden flex flex-col h-full border-b-4 border-b-white/50"
+                                whileHover={{ y: -10 }}
+                                className="bg-white/40 backdrop-blur-3xl border border-white/80 rounded-[40px] md:rounded-[56px] p-8 md:p-10 shadow-[0_20px_40px_-20px_rgba(0,0,0,0.05)] hover:shadow-[0_40px_80px_-20px_rgba(139,92,246,0.15)] transition-all duration-700 group relative overflow-hidden flex flex-col h-full border-b-4 border-b-white/50"
                             >
                                 {/* Decorative Glow */}
                                 <div className="absolute -top-32 -left-32 w-80 h-80 bg-[#8b5cf6]/5 rounded-full blur-[100px] group-hover:bg-[#8b5cf6]/10 transition-all duration-1000"></div>
 
-                                <div className="flex justify-between items-start mb-10 relative z-10">
-                                    <div className="w-24 h-24 bg-white rounded-[32px] p-1.5 flex items-center justify-center shadow-2xl border border-gray-50 group-hover:scale-110 transition-all duration-700 overflow-hidden">
+                                <div className="flex justify-between items-start mb-8 md:mb-10 relative z-10">
+                                    <div className="w-20 h-20 md:w-24 md:h-24 bg-white rounded-[24px] md:rounded-[32px] p-1.5 flex items-center justify-center shadow-2xl border border-gray-50 group-hover:scale-110 transition-all duration-700 overflow-hidden">
                                         <img
                                             src={agent.avatar || `https://ui-avatars.com/api/?name=${agent.agentName}&background=8b5cf6&color=fff`}
-                                            className="w-full h-full object-cover rounded-[24px]"
+                                            className="w-full h-full object-cover rounded-[18px] md:rounded-[24px]"
                                             alt={agent.agentName}
                                         />
                                     </div>
-                                    <div className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
+                                    <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
                                         <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                        <span className="text-[10px] font-black text-emerald-700 tracking-widest uppercase">STABLE_LINK</span>
+                                        <span className="text-[8px] md:text-[10px] font-black text-emerald-700 tracking-widest uppercase">STABLE_LINK</span>
                                     </div>
                                 </div>
 
-                                <div className="flex-1 relative z-10 space-y-4">
+                                <div className="flex-1 relative z-10 space-y-3 md:space-y-4">
                                     <div className="flex items-center gap-2">
-                                        <h3 className="text-3xl font-black text-gray-900 tracking-tighter uppercase leading-none">{agent.agentName}</h3>
+                                        <h3 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tighter uppercase leading-none">{agent.agentName}</h3>
                                         <span className="text-[10px] font-black text-[#8b5cf6] uppercase tracking-tighter border border-[#8b5cf6]/20 px-1.5 rounded-md">TM</span>
                                     </div>
                                     <div className="flex items-center gap-2 text-[10px] font-black text-[#8b5cf6] uppercase tracking-[0.3em] opacity-80">
                                         <Activity size={10} />
                                         {agent.category || 'General Intel'}
                                     </div>
-                                    <p className="text-lg text-gray-500 font-bold leading-relaxed mb-10 h-24 line-clamp-3 opacity-70 group-hover:opacity-100 transition-opacity">
+                                    <p className="text-base md:text-lg text-gray-500 font-bold leading-relaxed mb-6 md:mb-10 h-24 line-clamp-3 opacity-70 group-hover:opacity-100 transition-opacity">
                                         {agent.description}
                                     </p>
                                 </div>
 
-                                <div className="flex items-center justify-between mt-10 relative z-10 gap-6 pt-6 border-t border-white/40">
+                                <div className="flex items-center justify-between mt-6 md:mt-10 relative z-10 gap-4 md:gap-6 pt-6 border-t border-white/40">
                                     <button
                                         onClick={() => {
                                             const targetUrl = (!agent?.url || agent.url.trim() === "") ? AppRoute.agentSoon : agent.url;

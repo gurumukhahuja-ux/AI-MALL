@@ -28,7 +28,7 @@ const Footer = () => {
                 {/* Shimmer Overlay */}
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent w-[200%] animate-[shimmer_10s_infinite_linear] pointer-events-none"></div>
 
-                <div className="container mx-auto px-6 relative z-10">
+                <div className="max-w-7xl mx-auto px-6 md:px-12 xl:px-16 relative z-10">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
 
                         {/* Brand Section */}
@@ -37,8 +37,8 @@ const Footer = () => {
                                 <img src="/logo/Logo.png" alt="AI Mall Logo" className="w-16 h-16 object-contain" />
                             </div>
                             <p className="text-gray-600 text-sm leading-relaxed font-medium">
-                                A-Series™ — India's First AI App Marketplace.<br />
-                                100 AI Apps | A-Series™ | Partner Integrations<br />
+                                AI-MALL — India's First AI App Marketplace.<br />
+                                100 AI Apps | AI-MALL | Partner Integrations<br />
                                 Powered by UWO™
                             </p>
 
@@ -76,7 +76,7 @@ const Footer = () => {
                                     </Link>
                                 </li>
                                 <li>
-                                    <Link to="/vendor" className="text-gray-500 hover:text-blue-600 font-medium transition-all duration-300 hover:translate-x-2 inline-block">
+                                    <Link to="/vendor-register" className="text-gray-500 hover:text-blue-600 font-medium transition-all duration-300 hover:translate-x-2 inline-block">
                                         Become a Vendor
                                     </Link>
                                 </li>
@@ -111,7 +111,7 @@ const Footer = () => {
                                 </li>
                                 <li className="flex items-center gap-3 text-gray-500 group">
                                     <Mail size={20} className="text-blue-500 group-hover:scale-110 transition-transform" />
-                                    <a href="mailto:support@ai-mall.ai" className="group-hover:text-gray-700 transition-colors">support@ai-mall.ai</a>
+                                    <a href="mailto:support@ai-mall.ai" className="group-hover:text-gray-700 transition-colors">admin@uwo24.com</a>
                                 </li>
                                 <li className="flex items-center gap-3 text-gray-500 group">
                                     <a 

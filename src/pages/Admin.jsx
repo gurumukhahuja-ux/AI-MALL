@@ -20,6 +20,7 @@ import { motion } from "framer-motion";
 // Sub-Components
 import AdminOverview from "../Components/Admin/AdminOverview";
 import Approvals from "../Components/Admin/Approvals";
+import VendorApprovals from "../Components/Admin/VendorApprovals";
 import UserManagement from "../Components/Admin/UserManagement";
 import VendorManagement from "../Components/Admin/VendorManagement";
 import AgentManagement from "../Components/Admin/AgentManagement";
@@ -30,10 +31,12 @@ import AccessControl from "../Components/Admin/AccessControl";
 import PlatformSettings from "../Components/Admin/PlatformSettings";
 import AdminSupport from "../Components/Admin/Support";
 
+
 const Admin = () => {
   const [activeTab, setActiveTab] = useState("overview");
-  const [activeSubTab, setActiveSubTab] = useState("overview");
+  const [activeSubTab, setActiveSubTab] = useState("apps");
   const [isRevenueExpanded, setIsRevenueExpanded] = useState(true);
+  const [isApprovalsExpanded, setIsApprovalsExpanded] = useState(true);
 
   const navigation = {
     management: [
@@ -54,7 +57,16 @@ const Admin = () => {
       { id: "vendors", label: "Vendor Nodes", icon: UserCheck },
     ],
     governance: [
-      { id: "approvals", label: "Nexus Approvals", icon: CheckCircle },
+      {
+        id: "approvals",
+        label: "Nexus Approvals",
+        icon: CheckCircle,
+        hasSub: true,
+        subItems: [
+          { id: "apps", label: "App Reviews" },
+          { id: "vendors", label: "Vendor Requests" }
+        ]
+      },
       { id: "roles", label: "Access Security", icon: Shield },
       { id: "settings", label: "Core Protocol", icon: Settings },
     ]
@@ -63,7 +75,8 @@ const Admin = () => {
   const renderContent = () => {
     switch (activeTab) {
       case "overview": return <AdminOverview />;
-      case "approvals": return <Approvals />;
+      case "approvals":
+        return activeSubTab === "vendors" ? <VendorApprovals /> : <Approvals />;
       case "users": return <UserManagement />;
       case "vendors": return <VendorManagement />;
       case "agents": return <AgentManagement />;
@@ -78,6 +91,7 @@ const Admin = () => {
 
   const NavItem = ({ item }) => {
     const isMainActive = activeTab === item.id;
+    const isExpanded = item.id === 'finance' ? isRevenueExpanded : isApprovalsExpanded;
 
     return (
       <div className="space-y-1">
@@ -85,7 +99,11 @@ const Admin = () => {
           onClick={() => {
             setActiveTab(item.id);
             if (item.hasSub) {
-              setIsRevenueExpanded(!isRevenueExpanded);
+              if (item.id === 'finance') {
+                setIsRevenueExpanded(!isRevenueExpanded);
+              } else if (item.id === 'approvals') {
+                setIsApprovalsExpanded(!isApprovalsExpanded);
+              }
             }
           }}
           className={`w-full flex items-center justify-between px-6 py-4 rounded-[28px] transition-all duration-500 text-sm font-black tracking-tight relative group overflow-hidden ${isMainActive
@@ -106,13 +124,13 @@ const Admin = () => {
             <span className="uppercase tracking-widest text-[10px]">{item.label}</span>
           </div>
           {item.hasSub && (
-            <motion.div animate={{ rotate: isRevenueExpanded ? 180 : 0 }}>
+            <motion.div animate={{ rotate: isExpanded ? 180 : 0 }}>
               <ChevronDown className="w-4 h-4 opacity-40" />
             </motion.div>
           )}
         </button>
 
-        {item.hasSub && isRevenueExpanded && (
+        {item.hasSub && isExpanded && (
           <div className="pl-14 space-y-1 mt-1">
             {item.subItems.map(sub => (
               <button

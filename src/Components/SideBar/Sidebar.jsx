@@ -14,7 +14,8 @@ import {
   DollarSign,
   HelpCircle,
   ChevronDown,
-  User as UserIcon
+  User as UserIcon,
+  ShieldAlert
 } from 'lucide-react';
 import { apis, AppRoute } from '../../types';
 import { faqs } from '../../constants';
@@ -23,6 +24,7 @@ import { useRecoilState } from 'recoil';
 import { clearUser, getUserData, toggleState, userData, notificationState } from '../../userStore/userData';
 import { useLanguage } from '../../context/LanguageContext';
 import axios from 'axios';
+import apiService from '../../services/apiService';
 
 const Sidebar = ({ isOpen, onClose }) => {
   const { t } = useLanguage();
@@ -60,17 +62,20 @@ const Sidebar = ({ isOpen, onClose }) => {
     setSendStatus(null);
 
     try {
-      await axios.post(apis.support, {
-        email: user?.email || "guest@ai-mall.in",
-        issueType,
-        message: issueText,
-        userId: user?.id || null
-      });
+      // 1. Get or Create Support Chat Session
+      const chatType = userRole === 'vendor' ? 'vendor_support' : 'user_support';
+      const chat = await apiService.getMySupportChat(chatType);
+      if (!chat?._id) throw new Error("Could not initialize support session");
+
+      // 2. Format and Send the message
+      const fullMessage = `[Issue: ${issueType}] ${issueText}`;
+      await apiService.sendSupportChatMessage(chat._id, fullMessage);
+
       setSendStatus('success');
       setIssueText("");
       setTimeout(() => setSendStatus(null), 3000);
     } catch (error) {
-      console.error("Support submission failed", error);
+      console.error("Support chat integration failed", error);
       setSendStatus('error');
     } finally {
       setIsSending(false);
@@ -114,7 +119,7 @@ const Sidebar = ({ isOpen, onClose }) => {
 
     if (token) {
       fetchNotifications();
-      const interval = setInterval(fetchNotifications, 5 * 60 * 1000);
+      const interval = setInterval(fetchNotifications, 30 * 1000); // Poll every 30s
       return () => clearInterval(interval);
     }
   }, [token]);
@@ -126,14 +131,20 @@ const Sidebar = ({ isOpen, onClose }) => {
   }
 
   // Navigation items configuration
-  const navItems = [
-    { id: 'chat', icon: MessageSquare, label: t('chat'), route: '/dashboard/chat' },
-    { id: 'myAgents', icon: Bot, label: t('myAgents'), route: AppRoute.MY_AGENTS },
-    { id: 'marketplace', icon: ShoppingBag, label: t('marketplace'), route: AppRoute.MARKETPLACE, onClick: () => setNotifyTgl(prev => ({ ...prev, marketPlaceMode: 'AIMall' })) },
-    //{ id: 'vendor', icon: LayoutGrid, label: t('vendorDashboard'), route: '/vendor/overview' },
-    // { id: 'billing', icon: FileText, label: t('billing'), route: AppRoute.INVOICES },
-    //{ id: 'admin', icon: Settings, label: t('adminDashboard'), route: AppRoute.ADMIN },
+  const allNavItems = [
+    { id: 'chat', icon: MessageSquare, label: t('chat'), route: '/dashboard/chat', roles: ['user', 'admin', 'vendor'] },
+    { id: 'myAgents', icon: Bot, label: t('myAgents'), route: AppRoute.MY_AGENTS, roles: ['user', 'admin', 'vendor'] },
+    { id: 'marketplace', icon: ShoppingBag, label: t('marketplace'), route: AppRoute.MARKETPLACE, onClick: () => setNotifyTgl(prev => ({ ...prev, marketPlaceMode: 'AIMall' })), roles: ['user', 'admin', 'vendor'] },
+    { id: 'adminSupport', icon: ShieldAlert, label: t('adminSupport'), route: AppRoute.ADMIN_SUPPORT, roles: ['user', 'vendor', 'admin'] },
+
+    { id: 'vendor', icon: LayoutGrid, label: t('vendorDashboard'), route: '/vendor/overview', roles: ['vendor', 'admin'] },
+    { id: 'admin', icon: Settings, label: t('adminDashboard'), route: AppRoute.ADMIN, roles: ['admin'] },
   ];
+
+  // Determine effective role
+  const userRole = (user.role === 'admin' || user.role === 'Admin') ? 'admin' : user.role;
+
+  const navItems = allNavItems.filter(item => item.roles.includes(userRole));
 
   const toggleSection = (section) => {
     setExpandedSection(expandedSection === section ? null : section);
@@ -178,7 +189,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         className={`
           fixed inset-y-0 left-0 z-[200] bg-white/40 backdrop-blur-3xl border-r border-white/60
           flex flex-col transition-all duration-500 ease-in-out 
-          md:relative md:translate-x-0 shadow-2xl md:shadow-none w-64 md:w-20 overflow-visible
+          md:relative md:translate-x-0 shadow-2xl md:shadow-none w-[280px] md:w-20 overflow-visible
           ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
         `}
       >
@@ -189,18 +200,22 @@ const Sidebar = ({ isOpen, onClose }) => {
         </div>
 
         {/* Logo */}
-        <div className="p-4 flex items-center justify-center transition-all duration-500">
+        <div className="p-6 md:p-4 flex items-center justify-start md:justify-center transition-all duration-500 border-b border-white/20 md:border-none">
           <Link to="/" onClick={() => { setNotifyTgl(prev => ({ ...prev, marketPlaceMode: 'AIMall' })); onClose(); }} className="group">
-            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-[0_0_15px_rgba(236,72,153,0.5)] ring-2 ring-[#ec4899]/20 group-hover:rotate-12 transition-transform duration-500">
+            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-[0_0_15px_rgba(236,72,153,0.3)] ring-2 ring-[#ec4899]/20 group-hover:rotate-12 transition-transform duration-500">
               <span className="text-2xl font-black text-[#9333ea]">
-                A
+                AI
               </span>
             </div>
           </Link>
+          <div className="ml-4 md:hidden">
+            <h2 className="text-lg font-black text-slate-900 tracking-tighter">AI-MALL.</h2>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Navigation Center</p>
+          </div>
         </div>
 
         {/* Navigation Icons */}
-        <div className="flex-1 px-2 py-4 space-y-2 overflow-visible">
+        <div className="flex-1 px-3 md:px-2 py-6 md:py-4 space-y-3 md:space-y-2 overflow-visible">
           {navItems.map((item) => (
             <NavLink
               key={item.id}
@@ -211,7 +226,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                 onClose();
               }}
               className={({ isActive }) =>
-                `flex items-center justify-start md:justify-center p-4 rounded-2xl transition-all duration-300 group relative overflow-visible ${isActive
+                `flex items-center justify-start md:justify-center p-4 md:p-4 rounded-[20px] md:rounded-2xl transition-all duration-300 group relative overflow-visible ${isActive
                   ? 'bg-[#3b82f6] text-white shadow-lg shadow-blue-500/50'
                   : 'text-slate-400 hover:bg-white/50 hover:text-[#3b82f6]'
                 }`
@@ -220,7 +235,7 @@ const Sidebar = ({ isOpen, onClose }) => {
               {({ isActive }) => (
                 <>
                   <item.icon className="w-6 h-6 flex-shrink-0" />
-                  <span className="ml-3 font-bold text-sm md:hidden">{item.label}</span>
+                  <span className="ml-4 font-black text-sm md:hidden tracking-tight">{item.label}</span>
 
                   {/* Glassmorphic Tooltip on Hover */}
                   {!isActive && (
@@ -235,7 +250,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         </div>
 
         {/* Notifications Icon */}
-        <div className="px-2 py-2">
+        <div className="px-3 md:px-2 py-2">
           <NavLink
             to={AppRoute.NOTIFICATIONS}
             onClick={() => {
@@ -243,7 +258,7 @@ const Sidebar = ({ isOpen, onClose }) => {
               onClose();
             }}
             className={({ isActive }) =>
-              `flex items-center justify-start md:justify-center p-4 rounded-2xl transition-all duration-300 group relative overflow-visible ${isActive
+              `flex items-center justify-start md:justify-center p-4 md:p-4 rounded-[20px] md:rounded-2xl transition-all duration-300 group relative overflow-visible ${isActive
                 ? 'bg-[#3b82f6] text-white shadow-lg shadow-blue-500/50'
                 : 'text-slate-400 hover:bg-white/50 hover:text-[#3b82f6]'
               }`
@@ -259,7 +274,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                     </div>
                   )}
                 </div>
-                <span className="ml-3 font-bold text-sm md:hidden">Notifications</span>
+                <span className="ml-4 font-black text-sm md:hidden tracking-tight">Notifications</span>
 
                 {/* Glassmorphic Tooltip on Hover */}
                 {!isActive && (
@@ -273,7 +288,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         </div>
 
         {/* User Profile Icon */}
-        <div className="px-2 py-2">
+        <div className="px-3 md:px-2 py-2">
           <NavLink
             to={AppRoute.PROFILE}
             onClick={() => {
@@ -281,7 +296,7 @@ const Sidebar = ({ isOpen, onClose }) => {
               onClose();
             }}
             className={({ isActive }) =>
-              `flex items-center justify-start md:justify-center p-4 rounded-2xl transition-all duration-300 group relative overflow-visible ${isActive
+              `flex items-center justify-start md:justify-center p-4 md:p-4 rounded-[20px] md:rounded-2xl transition-all duration-300 group relative overflow-visible ${isActive
                 ? 'bg-[#3b82f6] text-white shadow-lg shadow-blue-500/50'
                 : 'text-slate-400 hover:bg-white/50 hover:text-[#3b82f6]'
               } w-full`
@@ -294,7 +309,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                     {user.name.charAt(0)}
                   </span>
                 </div>
-                <span className="ml-3 font-bold text-sm md:hidden text-[#3b82f6]">Profile</span>
+                <span className="ml-4 font-black text-sm md:hidden tracking-tight text-[#3b82f6]">Account Profile</span>
 
                 {/* Glassmorphic Tooltip on Hover */}
                 {!isActive && (
@@ -308,13 +323,13 @@ const Sidebar = ({ isOpen, onClose }) => {
         </div>
 
         {/* Help Icon */}
-        <div className="px-2 py-2 mb-4">
+        <div className="px-3 md:px-2 py-2 mb-8 md:mb-4">
           <button
             onClick={() => { setIsFaqOpen(true); onClose(); setExpandedSection(null); }}
-            className="flex items-center justify-start md:justify-center p-4 rounded-2xl transition-all duration-300 group relative overflow-visible text-slate-400 hover:bg-white/50 hover:text-[#3b82f6] w-full"
+            className="flex items-center justify-start md:justify-center p-4 md:p-4 rounded-[20px] md:rounded-2xl transition-all duration-300 group relative overflow-visible text-slate-400 hover:bg-white/50 hover:text-[#3b82f6] w-full"
           >
             <HelpCircle className="w-6 h-6 flex-shrink-0" />
-            <span className="ml-3 font-bold text-sm md:hidden text-[#3b82f6]">Help & FAQ</span>
+            <span className="ml-4 font-black text-sm md:hidden tracking-tight text-[#3b82f6]">Help & FAQ</span>
 
             {/* Glassmorphic Tooltip on Hover */}
             <div className="hidden md:block absolute left-full ml-3 px-4 py-2 text-slate-900 text-sm font-bold rounded-2xl shadow-xl whitespace-nowrap bg-white/60 backdrop-blur-xl border border-white/80 z-[9999] opacity-0 group-hover:opacity-100 group-active:opacity-100 group-focus:opacity-100 transition-opacity duration-300 pointer-events-none">
@@ -378,13 +393,12 @@ const Sidebar = ({ isOpen, onClose }) => {
         )}
       </AnimatePresence>
 
-      {/* FAQ Modal */}
       {isFaqOpen && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/30 backdrop-blur-md">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center md:p-4 bg-slate-900/30 backdrop-blur-md">
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="glass-card rounded-[56px] w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl border-white/80"
+            className="glass-card md:rounded-[56px] w-full max-w-2xl h-full md:max-h-[85vh] overflow-hidden flex flex-col shadow-2xl border-white/80"
           >
             <div className="p-4 md:p-8 border-b border-white/40 flex justify-between items-center bg-white/20 shrink-0">
               <div className="flex gap-2 md:gap-6 bg-white/40 p-1.5 rounded-full border border-white/60">
@@ -470,7 +484,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                     disabled={isSending || !issueText.trim()}
                     className="btn-purple py-5 shadow-2xl disabled:opacity-50"
                   >
-                    {isSending ? 'Transmitting...' : 'Initialize Ticket'}
+                    {isSending ? 'Sending...' : 'Send Message'}
                   </button>
 
                   <p className="text-[10px] text-center font-black text-slate-400 uppercase tracking-widest mt-4">

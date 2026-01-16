@@ -7,13 +7,32 @@ import { motion } from 'framer-motion';
 const UserManagement = () => {
     const toast = useToast();
     const [users, setUsers] = useState([]);
+    const [userStats, setUserStats] = useState({ total: 0, active: 0 });
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [expandedUser, setExpandedUser] = useState(null);
 
     useEffect(() => {
-        fetchUsers();
+        const loadData = async () => {
+            setLoading(true);
+            await Promise.all([fetchUsers(), fetchStats()]);
+            setLoading(false);
+        };
+        loadData();
     }, []);
+
+    const fetchStats = async () => {
+        try {
+            const data = await apiService.getAdminOverviewStats();
+            // Assuming getAdminOverviewStats returns the legacy object for now, 
+            // or I can call my specific endpoint if I want. 
+            // Let's use the individual endpoint for accuracy.
+            const res = await apiService.getAdminUserStats();
+            setUserStats(res);
+        } catch (err) {
+            console.error("Failed to fetch user stats", err);
+        }
+    };
 
     const fetchUsers = async () => {
         try {
@@ -89,6 +108,29 @@ const UserManagement = () => {
                         className="relative w-full bg-white/40 backdrop-blur-3xl border border-white/60 rounded-[20px] px-5 py-3 pl-10 focus:outline-none focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all font-medium text-xs text-gray-900 placeholder-gray-400"
                     />
                     <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#8b5cf6] transition-colors" />
+                </div>
+            </div>
+
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-white/40 backdrop-blur-md p-6 rounded-[32px] border border-white/60 shadow-sm">
+                    <div className="flex items-center gap-4 mb-2">
+                        <div className="w-10 h-10 rounded-2xl bg-indigo-50 flex items-center justify-center">
+                            <User className="w-5 h-5 text-indigo-600" />
+                        </div>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Users</span>
+                    </div>
+                    <p className="text-3xl font-black text-slate-900">{userStats.total || 0}</p>
+                </div>
+
+                <div className="bg-white/40 backdrop-blur-md p-6 rounded-[32px] border border-white/60 shadow-sm">
+                    <div className="flex items-center gap-4 mb-2">
+                        <div className="w-10 h-10 rounded-2xl bg-emerald-50 flex items-center justify-center">
+                            <Activity className="w-5 h-5 text-emerald-600" />
+                        </div>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Now</span>
+                    </div>
+                    <p className="text-3xl font-black text-slate-900">{userStats.active || 0}</p>
                 </div>
             </div>
 

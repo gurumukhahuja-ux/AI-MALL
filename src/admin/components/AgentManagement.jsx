@@ -15,6 +15,9 @@ const AgentManagement = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState('All');
     const [showFilterMenu, setShowFilterMenu] = useState(false);
+    const [confirmDelete, setConfirmDelete] = useState(null); // App to be deleted
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [deleteStatus, setDeleteStatus] = useState({ type: '', message: '' });
 
     const fetchStats = async () => {
         try {
@@ -36,8 +39,8 @@ const AgentManagement = () => {
             const payload = {
                 ...formData,
                 url: formData.agentUrl,
-                reviewStatus: 'Pending Review',
-                status: 'Draft'
+                reviewStatus: 'Approved',
+                status: 'Live'
             };
             delete payload.agentUrl;
 
@@ -68,6 +71,9 @@ const AgentManagement = () => {
     };
 
     const filteredInventory = statsData?.inventory?.filter(app => {
+        // Exclude only mocks if needed, but the user wants FULL control
+        if (app.id?.startsWith('mock-') || app._id?.startsWith('mock-')) return false;
+
         const matchesSearch = app.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             app.id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             app.status?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -113,7 +119,7 @@ const AgentManagement = () => {
         >
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-black text-gray-900 tracking-tighter mb-1">My Agents</h1>
+                    <h1 className="text-2xl font-black text-gray-900 tracking-tighter mb-1">AI-MALL Agents</h1>
                     <p className="text-gray-500 font-medium text-xs">Manage your AI agent inventory and deployments</p>
                 </div>
 
@@ -243,13 +249,13 @@ const AgentManagement = () => {
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-[10px] font-black text-gray-400 tracking-widest uppercase">M:</span>
                                                     <span className="text-xs font-bold text-gray-900">
-                                                        {app.pricing?.plans?.find(p => p.billingCycle === 'monthly')?.amount ? `$${app.pricing.plans.find(p => p.billingCycle === 'monthly').amount}` : 'Free'}
+                                                        {app.pricing?.plans?.find(p => p.billingCycle === 'monthly')?.amount ? `₹${app.pricing.plans.find(p => p.billingCycle === 'monthly').amount}` : 'Free'}
                                                     </span>
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-[10px] font-black text-gray-400 tracking-widest uppercase">Y:</span>
                                                     <span className="text-xs font-bold text-gray-900">
-                                                        {app.pricing?.plans?.find(p => p.billingCycle === 'yearly')?.amount ? `$${app.pricing.plans.find(p => p.billingCycle === 'yearly').amount}` : 'Free'}
+                                                        {app.pricing?.plans?.find(p => p.billingCycle === 'yearly')?.amount ? `₹${app.pricing.plans.find(p => p.billingCycle === 'yearly').amount}` : 'Free'}
                                                     </span>
                                                 </div>
                                             </div>
@@ -272,16 +278,9 @@ const AgentManagement = () => {
                                         <td className="px-6 py-3 text-right">
                                             <div className="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-all">
                                                 <button
-                                                    onClick={async (e) => {
+                                                    onClick={(e) => {
                                                         e.stopPropagation();
-                                                        if (window.confirm("Delete this agent permanently?")) {
-                                                            try {
-                                                                await apiService.deleteAgent(app.id || app._id);
-                                                                fetchStats();
-                                                            } catch (error) {
-                                                                alert("Delete failed: " + (error.response?.data?.error || error.message));
-                                                            }
-                                                        }
+                                                        setConfirmDelete(app);
                                                     }}
                                                     className="p-2 hover:bg-red-50 rounded-xl text-gray-400 hover:text-red-600 transition-all hover:shadow-md"
                                                 >
@@ -305,7 +304,7 @@ const AgentManagement = () => {
                                             <div className="w-20 h-20 bg-gray-50 rounded-[32px] flex items-center justify-center border border-white shadow-sm">
                                                 <Zap className="w-8 h-8 text-gray-300" />
                                             </div>
-                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">No agents found in inventory</p>
+                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">No agents found in AI-MALL</p>
                                         </div>
                                     </td>
                                 </tr>
@@ -320,6 +319,91 @@ const AgentManagement = () => {
                 onClose={() => setShowCreateModal(false)}
                 onSubmit={handleCreateApp}
             />
+
+            {/* Custom Premium Deletion Modal */}
+            <AnimatePresence>
+                {confirmDelete && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setConfirmDelete(null)}
+                            className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                            className="bg-white rounded-[32px] w-full max-w-md p-8 relative z-10 shadow-2xl border border-white/20"
+                        >
+                            <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center text-red-500 mb-6 mx-auto">
+                                <Trash2 className="w-8 h-8" />
+                            </div>
+
+                            <div className="text-center mb-8">
+                                <h3 className="text-xl font-black text-gray-900 mb-2">Delete Agent?</h3>
+                                <p className="text-gray-500 text-sm font-medium leading-relaxed">
+                                    You are about to permanently delete <span className="text-gray-900 font-bold">"{confirmDelete.name || confirmDelete.agentName}"</span>.
+                                    This will remove all associated sessions, messages, and user mappings.
+                                </p>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <button
+                                    onClick={() => setConfirmDelete(null)}
+                                    className="px-6 py-3 rounded-2xl border border-gray-200 text-[10px] font-black uppercase tracking-widest text-gray-500 hover:bg-gray-50 hover:text-gray-900 transition-all"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={async () => {
+                                        try {
+                                            setIsDeleting(true);
+                                            await apiService.deleteAgent(confirmDelete.id || confirmDelete._id);
+                                            setConfirmDelete(null);
+                                            fetchStats();
+                                            setDeleteStatus({ type: 'success', message: 'Agent deleted successfully' });
+                                            setTimeout(() => setDeleteStatus({ type: '', message: '' }), 5000);
+                                        } catch (error) {
+                                            setDeleteStatus({ type: 'error', message: error.response?.data?.error || error.message });
+                                        } finally {
+                                            setIsDeleting(false);
+                                        }
+                                    }}
+                                    className="px-6 py-3 rounded-2xl bg-red-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-red-600 shadow-lg shadow-red-500/20 transition-all flex items-center justify-center gap-2"
+                                    disabled={isDeleting}
+                                >
+                                    {isDeleting ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Delete Agent'}
+                                </button>
+                            </div>
+
+                            {deleteStatus.message && deleteStatus.type === 'error' && (
+                                <p className="text-center text-red-500 text-[10px] font-bold mt-4 animate-pulse">
+                                    {deleteStatus.message}
+                                </p>
+                            )}
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Success Toast */}
+            <AnimatePresence>
+                {deleteStatus.message && deleteStatus.type === 'success' && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 50 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 50 }}
+                        className="fixed bottom-8 right-8 z-[100] bg-gray-900 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 border border-white/10"
+                    >
+                        <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
+                            <Check className="w-5 h-5" />
+                        </div>
+                        <p className="text-[10px] font-black uppercase tracking-widest">{deleteStatus.message}</p>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </motion.div>
     );
 };

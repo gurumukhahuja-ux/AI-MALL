@@ -182,14 +182,7 @@ const MyAgents = () => {
                             <span className="md:hidden">Reset</span>
                         </button>
                     )}
-                    <button
-                        onClick={() => navigate(AppRoute.MARKETPLACE)}
-                        className="px-6 py-3 md:px-12 md:py-6 bg-gray-900 text-white font-black rounded-[24px] md:rounded-[32px] shadow-2xl transition-all hover:bg-[#8b5cf6] hover:scale-105 active:scale-95 uppercase text-[10px] md:text-xs tracking-[0.3em] flex items-center gap-2 md:gap-4 group"
-                    >
-                        <Zap className="w-4 h-4 md:w-5 md:h-5 group-hover:rotate-12 transition-transform" />
-                        <span className="hidden md:inline">Acquire New Entity</span>
-                        <span className="md:hidden">New Agent</span>
-                    </button>
+
                 </div>
             </header>
 

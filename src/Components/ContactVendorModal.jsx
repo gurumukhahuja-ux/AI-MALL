@@ -1,15 +1,10 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Mail, Send, Check } from 'lucide-react';
-import axios from 'axios';
+import apiService from '../services/apiService';
 
 const ContactVendorModal = ({ isOpen, onClose, agent, user }) => {
-    const [formData, setFormData] = useState({
-        userName: user?.name || '',
-        userEmail: user?.email || '',
-        subject: '',
-        message: ''
-    });
+    const [message, setMessage] = useState('');
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
     const [error, setError] = useState('');
@@ -20,32 +15,23 @@ const ContactVendorModal = ({ isOpen, onClose, agent, user }) => {
         setError('');
 
         try {
-            const response = await axios.post('http://localhost:5000/api/messages/contact-vendor', {
+            await apiService.sendVendorMessage({
+                vendorId: agent.creatorId || agent.userId,
                 agentId: agent._id,
-                userName: formData.userName,
-                userEmail: formData.userEmail,
-                subject: formData.subject,
-                message: formData.message,
-                userId: user?._id || null
+                text: message
             });
 
-            if (response.data.success) {
-                setSuccess(true);
-                setTimeout(() => {
-                    onClose();
-                    setSuccess(false);
-                    setFormData({ userName: user?.name || '', userEmail: user?.email || '', subject: '', message: '' });
-                }, 2000);
-            }
+            setSuccess(true);
+            setTimeout(() => {
+                onClose();
+                setSuccess(false);
+                setMessage('');
+            }, 2000);
         } catch (err) {
-            setError(err.response?.data?.message || 'Failed to send message. Please try again.');
+            setError(err.response?.data?.error || 'Failed to send message. Please try again.');
         } finally {
             setLoading(false);
         }
-    };
-
-    const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
     if (!isOpen) return null;
@@ -104,7 +90,7 @@ const ContactVendorModal = ({ isOpen, onClose, agent, user }) => {
                                 <Check className="w-10 h-10 text-emerald-600" />
                             </motion.div>
                             <h3 className="text-2xl font-black text-gray-900 mb-2">Message Sent!</h3>
-                            <p className="text-gray-600 font-semibold">The vendor will receive your message and respond via email.</p>
+                            <p className="text-gray-600 font-semibold">The vendor will see your message in their dashboard.</p>
                         </div>
                     ) : (
                         <div className="overflow-y-auto max-h-[calc(90vh-120px)]">
@@ -115,71 +101,21 @@ const ContactVendorModal = ({ isOpen, onClose, agent, user }) => {
                                     <p className="text-sm font-bold text-gray-900">{agent?.agentName}</p>
                                 </div>
 
-                                {/* User Name */}
-                                <div>
-                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-wider mb-2">
-                                        Your Name
-                                    </label>
-                                    <input
-                                        type="text"
-                                        name="userName"
-                                        value={formData.userName}
-                                        onChange={handleChange}
-                                        required
-                                        className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] focus:border-transparent font-semibold text-gray-900 transition-all"
-                                        placeholder="Enter your name"
-                                    />
-                                </div>
-
-                                {/* User Email */}
-                                <div>
-                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-wider mb-2">
-                                        Your Email
-                                    </label>
-                                    <input
-                                        type="email"
-                                        name="userEmail"
-                                        value={formData.userEmail}
-                                        onChange={handleChange}
-                                        required
-                                        className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] focus:border-transparent font-semibold text-gray-900 transition-all"
-                                        placeholder="your.email@example.com"
-                                    />
-                                </div>
-
-                                {/* Subject */}
-                                <div>
-                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-wider mb-2">
-                                        Subject
-                                    </label>
-                                    <input
-                                        type="text"
-                                        name="subject"
-                                        value={formData.subject}
-                                        onChange={handleChange}
-                                        required
-                                        maxLength={200}
-                                        className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] focus:border-transparent font-semibold text-gray-900 transition-all"
-                                        placeholder="Brief description of your inquiry"
-                                    />
-                                </div>
-
                                 {/* Message */}
                                 <div>
                                     <label className="block text-xs font-black text-gray-400 uppercase tracking-wider mb-2">
-                                        Message
+                                        Your Message
                                     </label>
                                     <textarea
-                                        name="message"
-                                        value={formData.message}
-                                        onChange={handleChange}
+                                        value={message}
+                                        onChange={(e) => setMessage(e.target.value)}
                                         required
                                         maxLength={2000}
-                                        rows={6}
+                                        rows={8}
                                         className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] focus:border-transparent font-semibold text-gray-900 transition-all resize-none"
-                                        placeholder="Describe your question or issue in detail..."
+                                        placeholder="Type your message to the vendor..."
                                     />
-                                    <p className="text-xs text-gray-400 mt-2 font-semibold">{formData.message.length}/2000 characters</p>
+                                    <p className="text-xs text-gray-400 mt-2 font-semibold">{message.length}/2000 characters</p>
                                 </div>
 
                                 {/* Error Message */}

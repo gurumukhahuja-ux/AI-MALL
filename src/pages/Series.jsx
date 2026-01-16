@@ -12,7 +12,7 @@ const Series = () => {
             <header className="absolute top-0 w-full p-6 flex justify-between items-center z-10 px-8 lg:px-16">
                 <div className="flex items-center gap-2">
                     <img src={Logo} alt="AI Mall Logo" className="w-8 h-8 object-contain" />
-                    <span className="text-2xl font-bold text-gray-900 tracking-tight">A-Series™</span>
+                    <span className="text-2xl font-bold text-gray-900 tracking-tight">AI-MALL</span>
                 </div>
                 <button className="text-blue-600 hover:bg-blue-50 p-2 rounded-full transition-colors">
                     <UserCircle className="w-8 h-8" strokeWidth={1.5} />
@@ -37,7 +37,7 @@ const Series = () => {
 
                 {/* Subheadline */}
                 <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-12 leading-relaxed animate-fade-in-up delay-200">
-                    Experience the next generation of intelligent assistance. A-Series™ learns, adapts, and creates with you in real-time through a stunning interface.
+                    Experience the next generation of intelligent assistance. AI-MALL learns, adapts, and creates with you in real-time through a stunning interface.
                 </p>
 
                 {/* CTA Button */}

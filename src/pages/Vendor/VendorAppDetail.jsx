@@ -67,8 +67,13 @@ const VendorAppDetail = () => {
 
     const handleDelete = async () => {
         try {
-            await vendorService.deleteApp(appId);
-            navigate('/vendor/apps'); // Redirect to app list after delete
+            const res = await vendorService.deleteApp(appId);
+            if (res.deletionStatus === 'Pending') {
+                alert("Deletion request submitted to admin. Pending approval.");
+                fetchData();
+            } else {
+                navigate('/vendor/apps'); // Redirect to app list after permanent delete
+            }
         } catch (err) {
             alert('Deletion failed. Please try again.');
         }

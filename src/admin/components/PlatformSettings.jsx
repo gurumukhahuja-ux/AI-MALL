@@ -6,9 +6,15 @@ import { useToast } from '../../Components/Toast/ToastContext';
 
 const PlatformSettings = () => {
     const toast = useToast();
+    const [platformSettings, setPlatformSettings] = useState({
+        allowPublicSignup: true,
+        maintenanceMode: false,
+        globalKillSwitch: false,
+        globalRateLimit: 50
+    });
     const [maintenance, setMaintenance] = useState(false);
     const [killSwitch, setKillSwitch] = useState(false);
-    const [reqLimit, setReqLimit] = useState(1);
+    const [reqLimit, setReqLimit] = useState(50);
     const [loading, setLoading] = useState(false);
     const [profile, setProfile] = useState({
         name: '',
@@ -23,7 +29,67 @@ const PlatformSettings = () => {
             email: user.email || 'admin@aimall.com',
             avatar: user.avatar || ''
         });
+        fetchPlatformSettings();
     }, []);
+
+    const fetchPlatformSettings = async () => {
+        try {
+            const settings = await apiService.getAdminSettings();
+            setPlatformSettings(settings);
+            setMaintenance(settings.maintenanceMode);
+            setKillSwitch(settings.globalKillSwitch);
+            setReqLimit(settings.globalRateLimit || 50);
+        } catch (err) {
+            console.error("Failed to fetch platform settings", err);
+        }
+    };
+
+    const handleToggleMaintenance = async () => {
+        try {
+            const newVal = !maintenance;
+            await apiService.updateMaintenanceMode(newVal);
+            setMaintenance(newVal);
+            toast.success(`Maintenance mode ${newVal ? 'ENABLED' : 'DISABLED'}`);
+        } catch (err) {
+            toast.error("Failed to toggle maintenance mode");
+        }
+    };
+
+    const handleToggleKillSwitch = async () => {
+        try {
+            const newVal = !killSwitch;
+            await apiService.updateKillSwitch(newVal);
+            setKillSwitch(newVal);
+            toast.success(`Global kill-switch ${newVal ? 'ACTIVATED' : 'DEACTIVATED'}`);
+        } catch (err) {
+            toast.error("Failed to toggle kill-switch");
+        }
+    };
+
+    const handleRateLimitChange = async (e) => {
+        const val = parseInt(e.target.value);
+        setReqLimit(val);
+    };
+
+    const saveRateLimit = async () => {
+        try {
+            await apiService.updateRateLimit(reqLimit);
+            toast.success("Rate limit updated successfully");
+        } catch (err) {
+            toast.error("Failed to update rate limit");
+        }
+    };
+
+    const handleToggleSignup = async () => {
+        try {
+            const nextSettings = { ...platformSettings, allowPublicSignup: !platformSettings.allowPublicSignup };
+            await apiService.updateAdminSettings(nextSettings);
+            setPlatformSettings(nextSettings);
+            toast.success(`Public signups ${nextSettings.allowPublicSignup ? 'ENABLED' : 'DISABLED'}`);
+        } catch (err) {
+            toast.error("Failed to update signup logic");
+        }
+    };
 
     const handleProfileChange = (e) => {
         const { name, value } = e.target;
@@ -156,7 +222,7 @@ const PlatformSettings = () => {
                         <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2">Platform Name</label>
                         <input
                             type="text"
-                            defaultValue="A-Series"
+                            defaultValue="AI-MALL"
                             className="w-full bg-white/60 border border-white/80 rounded-[16px] px-6 py-3 text-sm font-bold text-gray-900 outline-none focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all uppercase tracking-wide placeholder-gray-400"
                         />
                     </div>
@@ -181,11 +247,27 @@ const PlatformSettings = () => {
                 <div className="space-y-4">
                     <div className="flex items-center justify-between p-6 bg-white/60 rounded-[24px] border border-white/80 transition-all hover:bg-white/80 hover:shadow-sm group">
                         <div className="space-y-1">
+                            <p className="font-bold text-sm text-gray-900 uppercase tracking-tight">Public Registration</p>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Allow new users to create accounts independently.</p>
+                        </div>
+                        <button
+                            onClick={handleToggleSignup}
+                            className={`w-12 h-6 rounded-full p-1 transition-colors duration-300 ${platformSettings.allowPublicSignup ? 'bg-indigo-500' : 'bg-gray-200'}`}
+                        >
+                            <motion.div
+                                animate={{ x: platformSettings.allowPublicSignup ? 24 : 0 }}
+                                className="w-4 h-4 bg-white rounded-full shadow-sm"
+                            />
+                        </button>
+                    </div>
+
+                    <div className="flex items-center justify-between p-6 bg-white/60 rounded-[24px] border border-white/80 transition-all hover:bg-white/80 hover:shadow-sm group">
+                        <div className="space-y-1">
                             <p className="font-bold text-sm text-gray-900 uppercase tracking-tight">Maintenance Mode</p>
                             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Disable user access for system upgrades.</p>
                         </div>
                         <button
-                            onClick={() => setMaintenance(!maintenance)}
+                            onClick={handleToggleMaintenance}
                             className={`w-12 h-6 rounded-full p-1 transition-colors duration-300 ${maintenance ? 'bg-emerald-500' : 'bg-gray-200'}`}
                         >
                             <motion.div
@@ -201,7 +283,7 @@ const PlatformSettings = () => {
                             <p className="text-[10px] font-bold text-red-400/70 uppercase tracking-widest">Immediately disable ALL AI Agent inference APIs.</p>
                         </div>
                         <button
-                            onClick={() => setKillSwitch(!killSwitch)}
+                            onClick={handleToggleKillSwitch}
                             className={`w-12 h-6 rounded-full p-1 transition-colors duration-300 ${killSwitch ? 'bg-red-500' : 'bg-gray-200'}`}
                         >
                             <motion.div
@@ -222,14 +304,22 @@ const PlatformSettings = () => {
                 <div className="p-6 bg-white/40 rounded-[24px] border border-white/60">
                     <div className="flex justify-between items-center mb-4">
                         <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Global Requests Per Minute</label>
-                        <span className="text-sm font-black text-[#8b5cf6]">{reqLimit}k</span>
+                        <div className="flex items-center gap-4">
+                            <span className="text-sm font-black text-[#8b5cf6]">{reqLimit}k</span>
+                            <button
+                                onClick={saveRateLimit}
+                                className="px-3 py-1 bg-[#8b5cf6] text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-[#7c3aed] transition-all"
+                            >
+                                Apply
+                            </button>
+                        </div>
                     </div>
                     <input
                         type="range"
                         min="1"
                         max="100"
                         value={reqLimit}
-                        onChange={(e) => setReqLimit(e.target.value)}
+                        onChange={handleRateLimitChange}
                         className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#8b5cf6] hover:accent-[#7c3aed] transition-all"
                     />
                     <div className="flex justify-between text-[9px] font-black text-gray-400 mt-3 uppercase tracking-widest">

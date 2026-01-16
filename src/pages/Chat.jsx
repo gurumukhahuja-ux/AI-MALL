@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { Send, Bot, User, Sparkles, Plus, Monitor, ChevronDown, History, Trash2, Clock, Video, Mic, Image as ImageIcon, FileText, Camera, X, Copy, ThumbsUp, ThumbsDown, Share2, Download, Share, Check, MessageSquare } from 'lucide-react';
+import { Send, Bot, User, Sparkles, Plus, Monitor, ChevronDown, History, Trash2, Clock, Video, Mic, Image as ImageIcon, FileText, Camera, X, Copy, ThumbsUp, ThumbsDown, Share2, Download, Share, Check, MessageSquare, Pencil, MoreHorizontal } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { generateChatResponse } from '../services/geminiService';
 import { chatStorageService } from '../services/chatStorageService';
@@ -8,6 +8,7 @@ import Loader from '../Components/Loader/Loader';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { jsPDF } from "jspdf";
 
 const Chat = () => {
@@ -27,18 +28,21 @@ const Chat = () => {
   const [isListening, setIsListening] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [shareMessageContent, setShareMessageContent] = useState(null); // Track specific message to share
   const [isExporting, setIsExporting] = useState(false);
   const [showLiveAI, setShowLiveAI] = useState(false);
   const [liveAIResponse, setLiveAIResponse] = useState('');
   const [isLiveAIProcessing, setIsLiveAIProcessing] = useState(false);
   const [cameraFacing, setCameraFacing] = useState('user'); // 'user' or 'environment'
   const [isVideoPaused, setIsVideoPaused] = useState(false);
+  const [isAiSpeaking, setIsAiSpeaking] = useState(false);
   const liveVideoRef = useRef(null);
   const liveRecognitionRef = useRef(null);
   const [feedbackText, setFeedbackText] = useState('');
   const fileInputRef = useRef(null);
   const videoRef = useRef(null);
   const recognitionRef = useRef(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   const handleFileSelect = (e) => {
     const files = Array.from(e.target.files);
@@ -48,7 +52,13 @@ const Chat = () => {
       const reader = new FileReader();
       reader.onloadend = () => {
         const type = file.type.startsWith('image/') ? 'image' : 'file';
-        setAttachments(prev => [...prev, { type, content: reader.result, name: file.name }]);
+        console.log(`📎 Attaching: ${file.name}, Type: ${file.type}, Size: ${file.size} bytes`);
+        setAttachments(prev => [...prev, {
+          type,
+          content: reader.result,
+          name: file.name,
+          mimeType: file.type // Preserve MIME type for backend
+        }]);
       };
       reader.readAsDataURL(file);
     });
@@ -69,6 +79,40 @@ const Chat = () => {
           reader.readAsDataURL(file);
         }
       }
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    if (e.currentTarget.contains(e.relatedTarget)) return;
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const files = Array.from(e.dataTransfer.files);
+      files.forEach(file => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const type = file.type.startsWith('image/') ? 'image' : 'file';
+          setAttachments(prev => [...prev, {
+            type,
+            content: reader.result,
+            name: file.name,
+            mimeType: file.type || 'application/octet-stream'
+          }]);
+          toast.success(`Attached ${file.name}`);
+        };
+        reader.readAsDataURL(file);
+      });
     }
   };
 
@@ -115,6 +159,9 @@ const Chat = () => {
       return;
     }
 
+    // Capture text present before voice input starts
+    const initialText = inputValue;
+
     const SpeechRecognition = window.webkitSpeechRecognition;
     recognitionRef.current = new SpeechRecognition();
     recognitionRef.current.continuous = true;
@@ -126,28 +173,39 @@ const Chat = () => {
     };
 
     recognitionRef.current.onresult = (event) => {
-      let transcript = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        transcript += event.results[i][0].transcript;
+      let voiceTranscript = '';
+      for (let i = 0; i < event.results.length; i++) {
+        voiceTranscript += event.results[i][0].transcript;
+      }
+      const transcript = voiceTranscript;
+
+      const lowerTranscript = transcript.toLowerCase().trim();
+
+      // Check for various "send" commands at the end of the sentence
+      const sendCommandPattern = /(?:send|sent)\s*(?:it|message|this|now|text)?[\.\!\?]*\s*$/i;
+
+      if (sendCommandPattern.test(lowerTranscript)) {
+        // Remove the command and any trailing punctuation
+        const cleanVoiceText = transcript.replace(sendCommandPattern, '').trim();
+        const finalContent = initialText + (initialText && !initialText.endsWith(' ') ? ' ' : '') + cleanVoiceText;
+
+        // Only send if there is actual content
+        if (finalContent.trim().length > 0) {
+          setIsListening(false);
+          recognitionRef.current.onresult = null;
+          recognitionRef.current.stop();
+          setInputValue('');
+          handleSendMessage(null, finalContent);
+          return;
+        }
       }
 
-      const lowerTranscript = transcript.toLowerCase();
-
-      if (lowerTranscript.includes("send it")) {
-        const finalContent = transcript.replace(/send it/gi, '').trim();
-        setIsListening(false);
-        // CRITICAL: Stop listener first
-        recognitionRef.current.onresult = null;
-        recognitionRef.current.stop();
-        setInputValue('');
-        handleSendMessage(null, finalContent);
-      } else {
-        setInputValue(transcript);
-        const ta = document.querySelector('textarea');
-        if (ta) {
-          ta.style.height = '60px';
-          ta.style.height = Math.min(ta.scrollHeight, 150) + 'px';
-        }
+      const combinedText = initialText + (initialText && !initialText.endsWith(' ') ? ' ' : '') + voiceTranscript;
+      setInputValue(combinedText);
+      const ta = document.querySelector('textarea');
+      if (ta) {
+        ta.style.height = '60px';
+        ta.style.height = Math.min(ta.scrollHeight, 150) + 'px';
       }
     };
 
@@ -252,59 +310,425 @@ const Chat = () => {
     }
   };
 
-  const handleAction = (type, content = "") => {
-    if (type === 'like') {
-      toast.success("Thanks for the feedback!", {
-        icon: '👍',
-        style: { borderRadius: '12px', background: '#000', color: '#fff', fontSize: '12px', fontWeight: '900' }
-      });
-    } else if (type === 'dislike') {
-      setShowFeedbackModal(true);
+  const handleAction = (type, arg1, arg2) => {
+    if (type === 'like' || type === 'dislike') {
+      const msgId = arg1;
+      setMessages(prev => prev.map(m => {
+        if (m.id === msgId) {
+          const newFeedback = m.feedback === type ? null : type;
+          if (newFeedback === 'like') {
+            toast.success("Thanks for the feedback!", {
+              icon: '👍',
+              style: { borderRadius: '12px', background: '#000', color: '#fff', fontSize: '12px', fontWeight: '900' }
+            });
+          } else if (newFeedback === 'dislike') {
+            setShowFeedbackModal(true);
+          }
+          return { ...m, feedback: newFeedback };
+        }
+        return m;
+      }));
     } else if (type === 'share') {
+      const msgContent = arg1;
+      const msgTimestamp = arg2;
+      // Save the specific message content for export
+      if (msgContent) {
+        setShareMessageContent({ content: msgContent, timestamp: msgTimestamp });
+      } else {
+        setShareMessageContent(null); // Will export all messages
+      }
       setShowShareModal(true);
     } else if (type === 'report') {
       toast.success("Report submitted!", { icon: '🚩', style: { borderRadius: '12px', background: '#000', color: '#fff', fontSize: '12px', fontWeight: '900' } });
     }
   };
 
-  const handleExportPDF = async (mode = 'download') => {
-    if (messages.length === 0) return;
-    setIsExporting(true);
+  // Export single message as PDF
+  const handleExportSingleMessage = (content, timestamp) => {
+    // Render Markdown to HTML string
+    const renderedHTML = renderToStaticMarkup(
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+        {content}
+      </ReactMarkdown>
+    );
 
-    // Create HTML content for PDF (supports Hindi and all Unicode)
     const htmlContent = `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="UTF-8">
-        <title>AISA Chat Transcript</title>
+        <title>Document</title>
         <style>
-          * { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-          body { padding: 40px; max-width: 800px; margin: 0 auto; }
-          h1 { color: #8b5cf6; font-size: 24px; margin-bottom: 5px; }
-          .date { color: #666; font-size: 12px; margin-bottom: 20px; border-bottom: 2px solid #8b5cf6; padding-bottom: 15px; }
-          .message { margin-bottom: 20px; padding: 15px; border-radius: 12px; }
-          .user { background: #f3f4f6; }
-          .model { background: #f0e7ff; }
-          .role { font-weight: bold; font-size: 11px; text-transform: uppercase; margin-bottom: 8px; }
-          .user .role { color: #374151; }
-          .model .role { color: #8b5cf6; }
-          .content { font-size: 14px; line-height: 1.6; white-space: pre-wrap; word-wrap: break-word; }
-          @media print { body { padding: 20px; } }
+          @import url('https://fonts.googleapis.com/css2?family=Times+New+Roman&display=swap');
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          
+          body { 
+            background-color: #525659;
+            margin: 0;
+            padding: 40px 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            font-family: 'Times New Roman', Times, serif;
+          }
+          
+          .page {
+            background: #fff;
+            width: 210mm;
+            min-height: 297mm;
+            padding: 25mm;
+            box-shadow: 0 0 15px rgba(0,0,0,0.3);
+            position: relative;
+          }
+
+          .meta { text-align: right; margin-bottom: 2em; font-size: 11pt; color: #000; }
+          .content { font-size: 12pt; line-height: 1.5; text-align: justify; text-justify: inter-word; color: #000; }
+          
+          h1, h2, h3, h4 { color: #000; margin-top: 1.5em; margin-bottom: 0.8em; font-weight: bold; line-height: 1.2; text-align: left; }
+          h1 { font-size: 16pt; border-bottom: 1px solid #000; padding-bottom: 0.2em; }
+          h2 { font-size: 14pt; border-bottom: 1px solid #ccc; padding-bottom: 0.2em; }
+          h3 { font-size: 13pt; }
+          p { margin-bottom: 1em; }
+          ul, ol { margin-left: 2em; margin-bottom: 1em; }
+          li { margin-bottom: 0.4em; }
+          strong { font-weight: bold; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 1em; }
+          th, td { border: 1px solid #000; padding: 0.5em; text-align: left; }
+          th { background-color: #f0f0f0; font-weight: bold; }
+          blockquote { border-left: 3px solid #000; padding-left: 1em; margin-left: 0; margin-bottom: 1em; font-style: italic; }
+          code { font-family: 'Courier New', Courier, monospace; background: #f5f5f5; padding: 2px 4px; }
+          pre { font-family: 'Courier New', Courier, monospace; background: #f5f5f5; padding: 1em; border: 1px solid #ddd; overflow-x: auto; margin-bottom: 1em; }
+
+          @media print { 
+            body { background: none; padding: 0; display: block; }
+            .page { width: 100%; min-height: auto; box-shadow: none; margin: 0; padding: 0; }
+            @page { margin: 25mm 25mm; }
+          }
         </style>
       </head>
       <body>
-        <h1>🤖 AISA - Chat Transcript</h1>
-        <p class="date">Generated on: ${new Date().toLocaleString()}</p>
-        ${messages.map(msg => `
-          <div class="message ${msg.role}">
-            <div class="role">${msg.role === 'user' ? '👤 USER' : '🤖 AISA'}</div>
-            <div class="content">${msg.content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+        <div class="page">
+          <div class="meta">
+            Date: ${new Date(timestamp).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
           </div>
-        `).join('')}
+          <div class="content">${renderedHTML}</div>
+        </div>
       </body>
       </html>
     `;
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+    setTimeout(() => {
+      printWindow.print();
+      toast.success("Print dialog opened! Save as PDF", { icon: '📄' });
+    }, 500);
+  };
+
+  const handleExportPDF = async (mode = 'download') => {
+    // Check if we're exporting a single message or all messages
+    const isSingleMessage = shareMessageContent !== null;
+
+    if (!isSingleMessage && messages.length === 0) return;
+    setIsExporting(true);
+
+    // Determine what content to export
+    const exportContent = isSingleMessage
+      ? shareMessageContent.content
+      : null;
+    const exportTimestamp = isSingleMessage
+      ? shareMessageContent.timestamp
+      : null;
+
+    // If single message, use the single message export template
+    if (isSingleMessage) {
+      // Render Markdown to HTML string
+      const renderedHTML = renderToStaticMarkup(
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+          {exportContent}
+        </ReactMarkdown>
+      );
+
+      const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>Document</title>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Times+New+Roman&display=swap');
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          
+          body { 
+            background-color: #525659;
+            margin: 0;
+            padding: 40px 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            font-family: 'Times New Roman', Times, serif;
+          }
+          
+          .page {
+            background: #fff;
+            width: 210mm;
+            min-height: 297mm;
+            padding: 25mm;
+            box-shadow: 0 0 15px rgba(0,0,0,0.3);
+            position: relative;
+          }
+
+          .meta { text-align: right; margin-bottom: 2em; font-size: 11pt; color: #000; }
+          .content { font-size: 12pt; line-height: 1.5; text-align: justify; text-justify: inter-word; color: #000; }
+          
+          h1, h2, h3, h4 { color: #000; margin-top: 1.5em; margin-bottom: 0.8em; font-weight: bold; line-height: 1.2; text-align: left; }
+          h1 { font-size: 16pt; border-bottom: 1px solid #000; padding-bottom: 0.2em; }
+          h2 { font-size: 14pt; border-bottom: 1px solid #ccc; padding-bottom: 0.2em; }
+          h3 { font-size: 13pt; }
+          p { margin-bottom: 1em; }
+          ul, ol { margin-left: 2em; margin-bottom: 1em; }
+          li { margin-bottom: 0.4em; }
+          strong { font-weight: bold; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 1em; }
+          th, td { border: 1px solid #000; padding: 0.5em; text-align: left; }
+          th { background-color: #f0f0f0; font-weight: bold; }
+          blockquote { border-left: 3px solid #000; padding-left: 1em; margin-left: 0; margin-bottom: 1em; font-style: italic; }
+          code { font-family: 'Courier New', Courier, monospace; background: #f5f5f5; padding: 2px 4px; }
+          pre { font-family: 'Courier New', Courier, monospace; background: #f5f5f5; padding: 1em; border: 1px solid #ddd; overflow-x: auto; margin-bottom: 1em; }
+
+          @media print { 
+            body { background: none; padding: 0; display: block; }
+            .page { width: 100%; min-height: auto; box-shadow: none; margin: 0; padding: 0; }
+            @page { margin: 25mm 25mm; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="page">
+          <div class="meta">
+            Date: ${new Date(exportTimestamp || Date.now()).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+          </div>
+          <div class="content">${renderedHTML}</div>
+        </div>
+      </body>
+      </html>
+    `;
+
+      if (mode === 'download' || mode === 'open') {
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(htmlContent);
+        printWindow.document.close();
+
+        if (mode === 'download') {
+          setTimeout(() => {
+            printWindow.print();
+            toast.success("Print dialog opened! Save as PDF");
+          }, 500);
+        } else {
+          toast.success("Preview opened!");
+        }
+      } else if (mode === 'share') {
+        const blob = new Blob([htmlContent], { type: 'text/html' });
+        const fileName = `AISA_Response_${Date.now()}.html`;
+
+        if (navigator.share && navigator.canShare) {
+          try {
+            const file = new File([blob], fileName, { type: 'text/html' });
+            const shareData = { files: [file], title: 'AISA Response' };
+
+            if (navigator.canShare(shareData)) {
+              await navigator.share(shareData);
+              toast.success("Shared successfully!");
+            } else {
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = fileName;
+              a.click();
+              URL.revokeObjectURL(url);
+              toast.success("File downloaded!");
+            }
+          } catch (err) {
+            if (err.name !== 'AbortError') {
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = fileName;
+              a.click();
+              URL.revokeObjectURL(url);
+              toast.success("File downloaded!");
+            }
+          }
+        } else {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = fileName;
+          a.click();
+          URL.revokeObjectURL(url);
+          toast.success("File downloaded!");
+        }
+      }
+
+      setIsExporting(false);
+      setShowShareModal(false);
+      setShareMessageContent(null);
+      return;
+    }
+
+    // Full conversation export - Clean PROFESSIONAL document-style PDF (no cards, just text)
+    const htmlContent = `
+          < !DOCTYPE html >
+            <html>
+              <head>
+                <meta charset="UTF-8">
+                  <title>AISA - Conversation Transcript</title>
+                  <style>
+                    @import url('https://fonts.googleapis.com/css2?family=Times+New+Roman&family=Georgia&display=swap');
+
+                    * {margin: 0; padding: 0; box-sizing: border-box; }
+
+                    body {
+                      font - family: Georgia, 'Times New Roman', serif;
+                    font-size: 12pt;
+                    line-height: 1.8;
+                    color: #000;
+                    background: #fff;
+                    padding: 60px 80px;
+                    max-width: 800px;
+                    margin: 0 auto;
+          }
+
+                    /* Document Header */
+                    .doc-header {
+                      text - align: center;
+                    margin-bottom: 40px;
+                    padding-bottom: 30px;
+                    border-bottom: 2px solid #000;
+          }
+                    .doc-title {
+                      font - size: 24pt;
+                    font-weight: bold;
+                    text-transform: uppercase;
+                    letter-spacing: 2px;
+                    margin-bottom: 10px;
+          }
+                    .doc-subtitle {
+                      font - size: 12pt;
+                    color: #444;
+                    font-style: italic;
+          }
+                    .doc-meta {
+                      margin - top: 20px;
+                    font-size: 10pt;
+                    color: #666;
+          }
+
+                    /* Conversation Section */
+                    .conversation {
+                      margin - top: 30px;
+          }
+                    .section-title {
+                      font - size: 14pt;
+                    font-weight: bold;
+                    text-transform: uppercase;
+                    letter-spacing: 1px;
+                    margin-bottom: 25px;
+                    padding-bottom: 10px;
+                    border-bottom: 1px solid #999;
+          }
+
+                    /* Message Entry */
+                    .entry {
+                      margin - bottom: 30px;
+                    page-break-inside: avoid;
+          }
+                    .speaker {
+                      font - weight: bold;
+                    font-size: 11pt;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    margin-bottom: 8px;
+          }
+                    .speaker-user {color: #333; }
+                    .speaker-ai {color: #000; }
+                    .timestamp {
+                      font - size: 9pt;
+                    color: #888;
+                    font-style: italic;
+                    margin-left: 10px;
+                    font-weight: normal;
+          }
+                    .content {
+                      font - size: 11pt;
+                    line-height: 1.9;
+                    text-align: justify;
+                    white-space: pre-wrap;
+                    word-wrap: break-word;
+                    margin-left: 0;
+          }
+                    .separator {
+                      border: none;
+                    border-top: 1px dashed #ccc;
+                    margin: 25px 0;
+          }
+
+                    /* Footer */
+                    .doc-footer {
+                      margin - top: 50px;
+                    padding-top: 20px;
+                    border-top: 2px solid #000;
+                    text-align: center;
+                    font-size: 9pt;
+                    color: #666;
+          }
+                    .footer-brand {
+                      font - weight: bold;
+                    font-size: 10pt;
+                    letter-spacing: 1px;
+                    margin-bottom: 5px;
+          }
+
+                    @media print {
+                      body {padding: 40px 60px; }
+          }
+                  </style>
+              </head>
+              <body>
+                <div class="doc-header">
+                  <div class="doc-title">Conversation Transcript</div>
+                  <div class="doc-subtitle">AISA™ — AI-MALL Intelligence System</div>
+                  <div class="doc-meta">
+                    <strong>Date:</strong> ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} &nbsp;|&nbsp;
+                    <strong>Total Messages:</strong> ${messages.length}
+                  </div>
+                </div>
+
+                <div class="conversation">
+                  <div class="section-title">Transcript</div>
+
+                  ${messages.map((msg, idx) => `
+            <div class="entry">
+              <div class="speaker ${msg.role === 'user' ? 'speaker-user' : 'speaker-ai'}">
+                ${msg.role === 'user' ? 'USER' : 'AISA (AI Assistant)'}
+                <span class="timestamp">${new Date(msg.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
+              </div>
+              <div class="content">${msg.content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+            </div>
+            ${idx < messages.length - 1 ? '<hr class="separator">' : ''}
+          `).join('')}
+                </div>
+
+                <div class="doc-footer">
+                  <div class="footer-brand">AI-MALL™</div>
+                  Powered by Unified Web Options & Services (UWO)<br>
+                    This document was automatically generated by AISA Intelligence System.<br>
+                      © ${new Date().getFullYear()} All Rights Reserved.
+                    </div>
+                  </body>
+                </html>
+                `;
 
     if (mode === 'download' || mode === 'open') {
       // Open in new window for print/save as PDF
@@ -449,6 +873,25 @@ const Chat = () => {
   };
 
   const handleLiveAIQuestion = async () => {
+    // Always stop any ongoing speech when interaction starts/toggles
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+
+    // Toggle Logic: If already listening/processing, stop everything
+    if (isLiveAIProcessing) {
+      if (liveRecognitionRef.current) {
+        liveRecognitionRef.current.stop();
+        liveRecognitionRef.current = null;
+      }
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+      setIsLiveAIProcessing(false);
+      setLiveAIResponse("Listening stopped.");
+      return;
+    }
+
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
       toast.error("Speech recognition not supported on this device");
       return;
@@ -485,7 +928,12 @@ const Chat = () => {
           name: 'live_capture.jpg'
         }] : [];
 
-        const response = await generateChatResponse([], transcript, undefined, attachment);
+        const response = await generateChatResponse(
+          [],
+          transcript,
+          "You are AISA, participating in a live video call. You are seeing the user and their surroundings through their camera. Answer naturally as if you are looking at them. Do not refer to 'the image provided' or 'uploaded image'; instead say 'I see' or describe what is happening in the video feed directly. Be conversational, helpful, and concise.",
+          attachment
+        );
         setLiveAIResponse(response);
 
         // Speak the response using Text-to-Speech
@@ -498,6 +946,11 @@ const Chat = () => {
           utterance.rate = 1.0;
           utterance.pitch = 1.0;
           utterance.volume = 1.0;
+
+          // Track speaking state for visualizer
+          utterance.onstart = () => setIsAiSpeaking(true);
+          utterance.onend = () => setIsAiSpeaking(false);
+          utterance.onerror = () => setIsAiSpeaking(false);
 
           // Try to use a nice voice
           const voices = window.speechSynthesis.getVoices();
@@ -589,8 +1042,11 @@ const Chat = () => {
     const content = voiceContent !== null ? voiceContent.trim() : inputValue.trim();
     const currentAttachments = attachments;
 
+    console.log("📤 Sending:", { content, attachmentCount: currentAttachments.length, isLoading });
+
+    // Block if no content AND no attachments, or if already loading
     if ((!content && currentAttachments.length === 0) || isLoading) {
-      console.log("Send Blocked:", { content: !!content, attachments: currentAttachments.length, isLoading });
+      console.log("Send Blocked:", { hasContent: !!content, attachments: currentAttachments.length, isLoading });
       return;
     }
 
@@ -631,23 +1087,68 @@ const Chat = () => {
       }
 
       // Generate AI response
-      // Optimized history: Strip large base64 data to avoid redundant payload overhead
+      // Check if we have multiple document attachments - process separately
+      // Case-insensitive extension matching
+      const docAttachments = currentAttachments.filter(a => {
+        const name = (a.name || '').toLowerCase();
+        return a.type === 'file' ||
+          name.endsWith('.pdf') ||
+          name.endsWith('.docx') ||
+          name.endsWith('.doc') ||
+          name.endsWith('.txt');
+      });
+      const imageAttachments = currentAttachments.filter(a => a.type === 'image');
+
+      // Optimized history
       const chatHistory = [...messages, userMsg].map(m => ({
         role: m.role,
         content: m.content
       }));
 
-      const aiResponseText = await generateChatResponse(chatHistory, content, undefined, currentAttachments);
+      console.log("🚀 Processing:", {
+        docCount: docAttachments.length,
+        docNames: docAttachments.map(d => d.name),
+        imageCount: imageAttachments.length,
+        content: content
+      });
 
-      const modelMsg = {
-        id: (Date.now() + 1).toString(),
-        role: 'model',
-        content: aiResponseText,
-        timestamp: Date.now(),
-      };
+      // If multiple documents, process each separately
+      if (docAttachments.length > 1) {
+        for (let i = 0; i < docAttachments.length; i++) {
+          const doc = docAttachments[i];
+          console.log(`📄 Processing document ${i + 1}/${docAttachments.length}: ${doc.name}`);
 
-      setMessages((prev) => [...prev, modelMsg]);
-      await chatStorageService.saveMessage(activeSessionId, modelMsg);
+          const docQuestion = content
+            ? `Regarding the document "${doc.name}": ${content}`
+            : `Please analyze this document: "${doc.name}"`;
+
+          const aiResponseText = await generateChatResponse(chatHistory, docQuestion, "You are AISA, the AI-MALL Intelligence System. If the user says 'hello' or greets you, introduce yourself as AISA.", [doc]);
+
+          const modelMsg = {
+            id: (Date.now() + i + 1).toString(),
+            role: 'model',
+            content: `📄 **${doc.name}**\n\n${aiResponseText}`,
+            timestamp: Date.now() + i,
+          };
+
+          setMessages((prev) => [...prev, modelMsg]);
+          await chatStorageService.saveMessage(activeSessionId, modelMsg);
+        }
+      } else {
+        // Single document or images - process normally
+        const aiResponseText = await generateChatResponse(chatHistory, content, "You are AISA, the AI-MALL Intelligence System. If the user says 'hello' or greets you, introduce yourself as AISA.", currentAttachments);
+        console.log("✅ AI Response received:", aiResponseText?.slice(0, 100) + "...");
+
+        const modelMsg = {
+          id: (Date.now() + 1).toString(),
+          role: 'model',
+          content: aiResponseText,
+          timestamp: Date.now(),
+        };
+
+        setMessages((prev) => [...prev, modelMsg]);
+        await chatStorageService.saveMessage(activeSessionId, modelMsg);
+      }
     } catch (err) {
       console.error("Critical Send Error:", err);
     } finally {
@@ -779,7 +1280,22 @@ const Chat = () => {
       </motion.div>
 
       {/* Main Area */}
-      <div className="flex-1 flex flex-col relative bg-transparent w-full min-w-0">
+      <div
+        className="flex-1 flex flex-col relative bg-transparent w-full min-w-0"
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        {isDragging && (
+          <div className="absolute inset-0 z-[100] bg-blue-500/10 backdrop-blur-sm border-4 border-blue-500/50 border-dashed m-4 rounded-[32px] flex items-center justify-center pointer-events-none">
+            <div className="bg-white p-6 rounded-2xl shadow-xl flex flex-col items-center animate-bounce">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4 text-blue-500">
+                <Download size={32} />
+              </div>
+              <h3 className="text-xl font-bold text-gray-800">Drop to Attach</h3>
+            </div>
+          </div>
+        )}
 
         {/* Header - Transparent & Refined */}
         <div className="h-20 flex items-center justify-between px-6 sm:px-10 bg-white/20 backdrop-blur-md border-b border-white/40 z-[50] shrink-0">
@@ -806,7 +1322,7 @@ const Chat = () => {
         </div>
 
         {/* Messages - Fluid & Glassy */}
-        <div className="flex-1 overflow-y-auto p-6 sm:p-12 space-y-10 no-scrollbar">
+        <div className="flex-1 overflow-y-auto px-2 py-4 sm:p-12 space-y-8 sm:space-y-10 no-scrollbar">
           {messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center px-6">
               <div className="relative mb-10">
@@ -819,14 +1335,17 @@ const Chat = () => {
               <p className="text-sm sm:text-base text-gray-500 font-medium max-w-sm leading-relaxed">Your advanced AI agent is calibrated and ready for interaction. How can we optimize your workflow today?</p>
             </div>
           ) : (
-            <div className="max-w-4xl mx-auto space-y-8">
+            <div className="w-full space-y-8">
               {messages.map((msg) => (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   key={msg.id}
-                  className={`flex items-start gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
+                  className={`group/msg flex items-start gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
                 >
+                  {/* User Message Actions - Left side, hidden until hover */}
+
+
                   <div className={`w-10 h-10 rounded-2xl flex-shrink-0 flex items-center justify-center shadow-lg transform transition-transform hover:scale-110 ${msg.role === 'user'
                     ? 'bg-gradient-to-br from-gray-700 to-gray-900 text-white'
                     : 'bg-white text-[#8b5cf6] border border-white/60'
@@ -834,8 +1353,8 @@ const Chat = () => {
                     {msg.role === 'user' ? <User size={20} /> : <Bot size={22} />}
                   </div>
 
-                  <div className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'} max-w-[85%]`}>
-                    <div className={`px-6 py-4 rounded-[28px] text-[15px] font-medium leading-relaxed shadow-glass backdrop-blur-3xl border transition-all hover:shadow-xl ${msg.role === 'user'
+                  <div className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'} max-w-[75%]`}>
+                    <div className={`px-5 py-3 rounded-2xl text-[15px] font-medium leading-normal break-words break-all shadow-sm backdrop-blur-3xl border transition-all hover:shadow-md ${msg.role === 'user'
                       ? 'bg-white/80 text-gray-900 border-white/40 rounded-tr-none'
                       : 'bg-white/40 text-gray-800 border-white/80 rounded-tl-none'
                       }`}>
@@ -885,21 +1404,21 @@ const Chat = () => {
                             <Copy size={16} />
                           </button>
                           <button
-                            onClick={() => handleAction('like')}
-                            className="p-2 text-gray-400 hover:text-green-500 hover:bg-green-50 rounded-lg transition-all active:scale-95"
+                            onClick={() => handleAction('like', msg.id)}
+                            className={`p-2 transition-all rounded-lg active:scale-95 ${msg.feedback === 'like' ? 'text-blue-500 bg-blue-50' : 'text-gray-400 hover:text-green-500 hover:bg-green-50'}`}
                             title="Helpful"
                           >
-                            <ThumbsUp size={16} />
+                            <ThumbsUp size={16} fill={msg.feedback === 'like' ? "currentColor" : "none"} />
                           </button>
                           <button
-                            onClick={() => handleAction('dislike')}
-                            className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all active:scale-95"
+                            onClick={() => handleAction('dislike', msg.id)}
+                            className={`p-2 transition-all rounded-lg active:scale-95 ${msg.feedback === 'dislike' ? 'text-red-500 bg-red-50' : 'text-gray-400 hover:text-red-500 hover:bg-red-50'}`}
                             title="Not Helpful"
                           >
-                            <ThumbsDown size={16} />
+                            <ThumbsDown size={16} fill={msg.feedback === 'dislike' ? "currentColor" : "none"} />
                           </button>
                           <button
-                            onClick={() => handleAction('share')}
+                            onClick={() => handleAction('share', msg.content, msg.timestamp)}
                             className="p-2 text-gray-400 hover:text-purple-500 hover:bg-purple-50 rounded-lg transition-all active:scale-95"
                             title="Share"
                           >
@@ -912,6 +1431,54 @@ const Chat = () => {
                       {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • SYNCED
                     </span>
                   </div>
+                  {msg.role === 'user' && (
+                    <div className="flex items-center gap-1 opacity-0 group-hover/msg:opacity-100 transition-opacity duration-200">
+                      <button
+                        onClick={() => {
+                          setInputValue(msg.content);
+                          const msgIndex = messages.findIndex(m => m.id === msg.id);
+                          if (msgIndex !== -1) {
+                            const idsToDelete = [msg.id];
+                            if (msgIndex + 1 < messages.length && messages[msgIndex + 1].role === 'model') {
+                              idsToDelete.push(messages[msgIndex + 1].id);
+                            }
+                            setMessages(prev => prev.filter(m => !idsToDelete.includes(m.id)));
+                          }
+                          toast.success("Edit your message and resend", { icon: '✏️' });
+                        }}
+                        className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all active:scale-95"
+                        title="Edit"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        onClick={() => handleCopy(msg.content)}
+                        className="p-2 text-gray-400 hover:text-green-500 hover:bg-green-50 rounded-lg transition-all active:scale-95"
+                        title="Copy"
+                      >
+                        <Copy size={14} />
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (window.confirm('Delete this message and its response?')) {
+                            const msgIndex = messages.findIndex(m => m.id === msg.id);
+                            if (msgIndex !== -1) {
+                              const idsToDelete = [msg.id];
+                              if (msgIndex + 1 < messages.length && messages[msgIndex + 1].role === 'model') {
+                                idsToDelete.push(messages[msgIndex + 1].id);
+                              }
+                              setMessages(prev => prev.filter(m => !idsToDelete.includes(m.id)));
+                              toast.success("Messages deleted", { icon: '🗑️' });
+                            }
+                          }
+                        }}
+                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all active:scale-95"
+                        title="Delete"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  )}
                 </motion.div>
               ))}
 
@@ -932,8 +1499,8 @@ const Chat = () => {
         </div>
 
         {/* Input Area - Floaty Glass Design */}
-        <div className="p-4 sm:p-6 md:p-8 lg:p-12 shrink-0 bg-transparent relative z-[60]">
-          <div className="max-w-4xl mx-auto flex items-center gap-3">
+        <div className="p-2 sm:p-6 md:p-8 lg:p-12 shrink-0 bg-transparent relative z-[60]">
+          <div className="w-full max-w-5xl mx-auto flex items-center gap-3">
             <div className="relative">
               {/* Hidden File Input */}
               <input
@@ -1024,51 +1591,50 @@ const Chat = () => {
                 </div>
               )}
 
-              <div className="absolute inset-0 bg-blue-500/5 blur-2xl opacity-0 group-focus-within:opacity-100 transition-opacity"></div>
-              <textarea
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={handleKeyDown}
-                onPaste={handlePaste}
-                placeholder="Ask Aisa..."
-                className={`w-full bg-white/60 backdrop-blur-3xl border border-white rounded-[32px] pl-6 py-4 text-[15px] text-gray-900 font-medium placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-[#3b82f6]/10 shadow-[0_20px_50px_rgba(0,0,0,0.05)] transition-all resize-none overflow-y-auto no-scrollbar 
-                  ${(inputValue.trim() || attachments.length > 0) ? 'min-h-[60px] h-auto max-h-[150px] pr-16' : 'h-[60px] pr-48'}`}
-                style={{ height: (inputValue.trim() || attachments.length > 0) ? 'auto' : '60px' }}
-                onInput={(e) => {
-                  e.target.style.height = '60px';
-                  e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
-                }}
-              />
+              <div className={`relative flex items-center gap-2 bg-white/60 backdrop-blur-3xl border border-white rounded-[32px] p-2 pl-4 shadow-[0_20px_50px_rgba(0,0,0,0.05)] transition-all group focus-within:ring-4 focus-within:ring-[#3b82f6]/10 ${(inputValue.trim() || attachments.length > 0) ? 'min-h-[60px]' : 'h-[60px]'}`}>
 
-              <div className="absolute right-6 bottom-3.5 flex items-center gap-2">
-                {!inputValue.trim() && !isListening && (
-                  <>
+                <div className="absolute inset-0 bg-blue-500/5 blur-2xl opacity-0 group-focus-within:opacity-100 transition-opacity rounded-[32px] pointer-events-none"></div>
+
+                <textarea
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  onPaste={handlePaste}
+                  placeholder="Ask Aisa..."
+                  className="w-full bg-transparent border-none p-0 py-3 text-left text-[15px] text-gray-900 font-medium placeholder-gray-400 focus:outline-none resize-none overflow-y-auto no-scrollbar max-h-[150px]"
+                  style={{ height: (inputValue.trim() || attachments.length > 0) ? 'auto' : '100%' }}
+                  onInput={(e) => {
+                    e.target.style.height = 'auto';
+                    e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
+                  }}
+                />
+
+                <div className="flex items-center gap-2 pb-1 pr-2 shrink-0">
+                  {!inputValue.trim() && !isListening && (
                     <button
                       type="button"
                       onClick={handleStartLiveAI}
-                      className="p-2.5 text-[#3b82f6] hover:bg-blue-50 transition-colors rounded-full flex items-center justify-center"
+                      className="w-10 h-10 text-[#3b82f6] hover:bg-blue-50 transition-colors rounded-full flex items-center justify-center"
                     >
                       <Video className="w-5 h-5" />
                     </button>
-                  </>
-                )}
-                {(!inputValue.trim() || isListening) && (
+                  )}
                   <button
                     type="button"
                     onClick={handleVoiceInput}
-                    className={`p-2.5 transition-all rounded-full flex items-center justify-center ${isListening ? 'bg-red-500 text-white animate-pulse shadow-red-500/40 shadow-lg' : 'text-[#3b82f6] hover:bg-blue-50'}`}
+                    className={`w-10 h-10 transition-all rounded-full flex items-center justify-center ${isListening ? 'bg-red-500 text-white animate-pulse shadow-red-500/40 shadow-lg' : 'text-[#3b82f6] hover:bg-blue-50'}`}
                   >
                     <Mic className={`w-5 h-5 ${isListening ? 'animate-bounce' : ''}`} />
                   </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => handleSendMessage()}
-                  disabled={(!inputValue.trim() && attachments.length === 0) || isLoading}
-                  className="w-10 h-10 rounded-full bg-[#3b82f6] text-white hover:scale-105 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed shadow-md flex items-center justify-center shadow-blue-500/20 cursor-pointer z-[60]"
-                >
-                  <Send className="w-5 h-5" />
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSendMessage()}
+                    disabled={(!inputValue.trim() && attachments.length === 0) || isLoading}
+                    className="w-10 h-10 rounded-full bg-[#3b82f6] text-white hover:scale-105 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed shadow-md flex items-center justify-center shadow-blue-500/20 cursor-pointer z-[60]"
+                  >
+                    <Send className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1257,98 +1823,141 @@ const Chat = () => {
                     <Bot size={20} />
                   </div>
                   <div>
-                    <h3 className="text-sm font-black text-white uppercase tracking-tight">AISA Live</h3>
-                    <span className="text-[10px] font-bold text-green-400 uppercase tracking-widest">● Connected</span>
+                    <h3 className="text-sm font-black text-white uppercase tracking-tight" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>AISA Live</h3>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+                      <span className="text-[10px] font-bold text-white uppercase tracking-widest" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>Connected</span>
+                    </div>
                   </div>
                 </div>
 
                 <button
                   onClick={handleStopLiveAI}
-                  className="p-3 bg-red-500 hover:bg-red-600 text-white rounded-2xl transition-all"
+                  className="p-3 bg-red-500 hover:bg-red-600 text-white rounded-2xl transition-all shadow-lg"
                 >
                   <X size={20} />
                 </button>
               </div>
 
-              {/* AI Response - Clean White Text Overlay */}
-              {liveAIResponse && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="absolute top-20 left-4 right-4 sm:left-8 sm:right-8 z-20"
-                  style={{ color: '#FFFFFF' }}
-                >
-                  <span style={{ color: '#FFFFFF', textShadow: '0 2px 10px rgba(0,0,0,0.9)', fontSize: '14px', fontWeight: 'bold' }}>AISA:</span>
-                  <div style={{ color: '#FFFFFF', textShadow: '0 2px 12px rgba(0,0,0,1), 0 0 20px rgba(0,0,0,0.8)', fontSize: '18px', fontWeight: '500', lineHeight: '1.6', marginTop: '4px' }}>
-                    {liveAIResponse}
-                  </div>
-                </motion.div>
-              )}
+
             </div>
 
             {/* Bottom Controls - Direct on Video */}
-            <div className="absolute bottom-6 left-0 right-0 sm:bottom-10">
-              <div className="flex items-center justify-center gap-6 sm:gap-10">
+            <div className="absolute bottom-4 left-0 right-0 sm:bottom-8 px-4 flex flex-col items-center gap-6">
+              <div className="flex flex-col items-center gap-2 w-full px-4 mb-2">
+                {/* AI Response Text - Top most in bottom cluster */}
+                {(liveAIResponse || isAiSpeaking) && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-center max-w-2xl mx-auto"
+                  >
+                    {/* Graphical Voice Visualizer */}
+                    {isAiSpeaking && (
+                      <div className="flex items-center justify-center gap-1.5 h-16 min-h-[64px] mb-2">
+                        {[1, 2, 3, 4, 5].map((i) => (
+                          <motion.div
+                            key={i}
+                            className="w-2 sm:w-3 bg-white rounded-full shadow-[0_0_15px_rgba(255,255,255,0.8)]"
+                            animate={{
+                              height: [10, 30 + Math.random() * 40, 10],
+                            }}
+                            transition={{
+                              duration: 0.4 + Math.random() * 0.2,
+                              repeat: Infinity,
+                              repeatType: "mirror",
+                              ease: "easeInOut"
+                            }}
+                          />
+                        ))}
+                      </div>
+                    )}
+
+                    {liveAIResponse && (
+                      <div style={{ color: '#FFFFFF', textShadow: '0 2px 12px rgba(0,0,0,1), 0 0 20px rgba(0,0,0,0.9)', fontSize: '18px', fontWeight: '700', lineHeight: '1.4' }}>
+                        {liveAIResponse}
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </div>
+
+              <div className="flex items-end justify-center gap-4 sm:gap-8 w-full">
                 {/* Switch Camera */}
-                <div className="flex flex-col items-center gap-2">
+                <div className="flex flex-col items-center gap-2 mb-2 group">
                   <button
                     onClick={handleSwitchCamera}
-                    className="w-14 h-14 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition-all active:scale-95"
+                    className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-black/40 backdrop-blur-md border border-white/20 text-white flex items-center justify-center transition-all duration-300 active:scale-95 hover:bg-black/60 hover:scale-110 shadow-lg"
                   >
-                    <Camera size={22} />
+                    <Camera className="w-5 h-5 sm:w-7 sm:h-7" />
                   </button>
-                  <span className="text-[9px] font-bold text-white uppercase tracking-wider">Flip</span>
+                  <span className="text-[9px] sm:text-[10px] font-extrabold text-black uppercase tracking-wider bg-white/90 px-2 py-0.5 rounded-full backdrop-blur-md shadow-md transition-all group-hover:scale-105">Flip</span>
                 </div>
 
                 {/* Pause/Resume Video */}
-                <div className="flex flex-col items-center gap-2">
+                <div className="flex flex-col items-center gap-2 mb-2 group">
                   <button
                     onClick={handleToggleVideoPause}
-                    className={`w-14 h-14 rounded-full flex items-center justify-center transition-all active:scale-95 ${isVideoPaused ? 'bg-green-500 text-white' : 'bg-white/20 hover:bg-white/30 text-white'}`}
+                    className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center transition-all duration-300 active:scale-95 backdrop-blur-md border border-white/20 hover:scale-110 shadow-lg ${isVideoPaused ? 'bg-green-500 text-white' : 'bg-black/40 text-white hover:bg-black/60'}`}
                   >
-                    {isVideoPaused ? <Video size={22} /> : <Video size={22} />}
+                    {isVideoPaused ? <Video className="w-5 h-5 sm:w-7 sm:h-7" /> : <Video className="w-5 h-5 sm:w-7 sm:h-7" />}
                   </button>
-                  <span className="text-[9px] font-bold text-white uppercase tracking-wider">{isVideoPaused ? 'Resume' : 'Pause'}</span>
+                  <span className="text-[9px] sm:text-[10px] font-extrabold text-black uppercase tracking-wider bg-white/90 px-2 py-0.5 rounded-full backdrop-blur-md shadow-md transition-all group-hover:scale-105">{isVideoPaused ? 'Resume' : 'Pause'}</span>
                 </div>
 
                 {/* Ask Question (Main Button) */}
-                <div className="flex flex-col items-center gap-2">
+                <div className="flex flex-col items-center gap-3 group">
                   <button
                     onClick={handleLiveAIQuestion}
-                    disabled={isLiveAIProcessing}
-                    className={`w-20 h-20 rounded-full flex items-center justify-center transition-all active:scale-95 shadow-2xl ${isLiveAIProcessing ? 'bg-red-500 animate-pulse ring-4 ring-red-500/50' : 'bg-gradient-to-br from-[#8b5cf6] to-[#d946ef] hover:shadow-purple-500/50 ring-4 ring-purple-500/30'}`}
+                    className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center transition-all duration-300 active:scale-95 shadow-xl border-4 ${isLiveAIProcessing ? 'bg-red-500 border-red-400 animate-pulse' : 'bg-white border-white/50 hover:scale-105 hover:shadow-2xl'}`}
                   >
-                    <Mic size={32} className="text-white" />
+                    <Mic className={`w-8 h-8 sm:w-10 sm:h-10 ${isLiveAIProcessing ? 'text-white' : 'text-[#8b5cf6]'}`} />
                   </button>
-                  <span className="text-[9px] font-bold text-white uppercase tracking-wider">{isLiveAIProcessing ? 'Listening...' : 'Ask AISA'}</span>
+                  <span className="text-[10px] sm:text-[11px] font-black text-black uppercase tracking-widest bg-white/90 px-3 py-1 rounded-full backdrop-blur-md shadow-lg transition-all group-hover:scale-105">
+                    {isLiveAIProcessing ? 'Listening...' : 'Ask AISA'}
+                  </span>
                 </div>
 
                 {/* Type Text Button */}
-                <div className="flex flex-col items-center gap-2">
+                <div className="flex flex-col items-center gap-2 mb-2 group">
                   <button
                     onClick={handleStopLiveAI}
-                    className="w-14 h-14 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition-all active:scale-95"
+                    className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-black/40 backdrop-blur-md border border-white/20 text-white flex items-center justify-center transition-all duration-300 active:scale-95 hover:bg-black/60 hover:scale-110 shadow-lg"
                   >
-                    <MessageSquare size={22} />
+                    <MessageSquare className="w-5 h-5 sm:w-7 sm:h-7" />
                   </button>
-                  <span className="text-[9px] font-bold text-white uppercase tracking-wider">Type</span>
+                  <span className="text-[9px] sm:text-[10px] font-extrabold text-black uppercase tracking-wider bg-white/90 px-2 py-0.5 rounded-full backdrop-blur-md shadow-md transition-all group-hover:scale-105">Type</span>
                 </div>
 
                 {/* End Call */}
-                <div className="flex flex-col items-center gap-2">
+                <div className="flex flex-col items-center gap-2 mb-2 group">
                   <button
                     onClick={handleStopLiveAI}
-                    className="w-14 h-14 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition-all active:scale-95"
+                    className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition-all duration-300 active:scale-95 shadow-lg border border-red-400 hover:scale-110 hover:shadow-red-500/30"
                   >
-                    <X size={22} />
+                    <X className="w-6 h-6 sm:w-8 sm:h-8" />
                   </button>
-                  <span className="text-[9px] font-bold text-white uppercase tracking-wider">End</span>
+                  <span className="text-[9px] sm:text-[10px] font-extrabold text-black uppercase tracking-wider bg-white/90 px-2 py-0.5 rounded-full backdrop-blur-md shadow-md transition-all group-hover:scale-105">End</span>
                 </div>
               </div>
 
-              <p style={{ color: '#FFFFFF', textAlign: 'center', fontSize: '12px', fontWeight: '500', marginTop: '24px', textShadow: '0 2px 10px rgba(0,0,0,1)' }}>
-                {isLiveAIProcessing ? '🎤 Listening to your question...' : '👆 Tap "Ask AISA" and speak your question'}
-              </p>
+              <div className="flex justify-center w-full mt-2">
+                <p style={{
+                  color: '#000000',
+                  textAlign: 'center',
+                  fontSize: '13px',
+                  fontWeight: '800',
+                  backgroundColor: 'rgba(255,255,255,0.9)',
+                  padding: '10px 20px',
+                  borderRadius: '30px',
+                  backdropFilter: 'blur(8px)',
+                  letterSpacing: '0.5px',
+                  boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
+                  textTransform: 'uppercase'
+                }}>
+                  {isLiveAIProcessing ? '🎤 Listening...' : '👆 Tap "Ask AISA" & Speak'}
+                </p>
+              </div>
             </div>
           </motion.div>
         )}

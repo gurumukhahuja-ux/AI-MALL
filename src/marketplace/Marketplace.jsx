@@ -135,7 +135,7 @@ const Marketplace = () => {
         const subject = helpForm.subject;
         const message = helpForm.message;
         try {
-            await axios.post('http://localhost:5000/api/support', {
+            await axios.post('http://localhost:8080/api/support', {
                 email: user?.email || 'guest@ai-mall.in',
                 senderName: user?.name || 'Guest User',
                 issueType: 'UserSupport',
@@ -156,30 +156,21 @@ const Marketplace = () => {
 
     // Strict Filter: Only show Live + Approved agents.
     const filteredAgents = agents.filter(agent => {
-        // Allow mock agents (which might not have these exact fields or status 'Live' is hardcoded)
-        const isLive = !agent.status || agent.status === 'Live' || agent.status === 'active';
-        const isApproved = agent.reviewStatus === 'Approved';
-
-        // Always show mocks
-        if (agent._id.startsWith('mock-')) return true;
-
-        // Exclude agents without an owner (System/Platform agents usually don't have one if seeded)
-        if (!agent.owner) return false;
-
         // Exclude A-Series Agents (Official)
         const aSeriesNames = [
             'AIBIZ', 'AIBASE', 'AICRAFT', 'AISA', 'AIBOTT',
             'AIGENE', 'AIBRAND', 'AISTREAM', 'AIOFFICE', 'AIDESK', 'AIFLOW'
         ];
 
-        // Debugging log to see what persists
-        // console.log("Checking Agent:", agent.agentName, "Owner:", agent.owner);
+        // Strict Requirement: Agent MUST have an owner (vendor or admin)
+        if (!agent.owner) return false;
+
+        // Strict Requirement: No mock agents
+        if (agent._id?.startsWith('mock-')) return false;
 
         if (aSeriesNames.includes(agent.agentName?.trim().toUpperCase()) || aSeriesNames.includes(agent.name?.trim().toUpperCase())) {
             return false;
         }
-
-        // if (!isLive || !isApproved) return false;
 
         const matchesCategory = filter === 'all' || agent.category === filter;
         const matchesSearch = (agent.agentName || agent.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -189,10 +180,11 @@ const Marketplace = () => {
 
     const categories = ['all', "Business OS", "Data & Intelligence", "Sales & Marketing", "HR & Finance", "Design & Creative", "Medical & Health AI"];
     // Exclude A-Series from Top Trending too
+    // Exclude A-Series from Top Trending
     const topUsedAgents = agents.filter(a => ![
         'AIBIZ', 'AIBASE', 'AICRAFT', 'AISA', 'AIBOTT',
         'AIGENE', 'AIBRAND', 'AISTREAM', 'AIOFFICE', 'AIDESK', 'AIFLOW'
-    ].includes(a.agentName?.trim().toUpperCase())).slice(0, 3);
+    ].includes(a.agentName?.trim().toUpperCase() || a.name?.trim().toUpperCase())).slice(0, 3);
 
     // --- ANIMATION VARIANTS ---
     const containerVariants = {
@@ -303,7 +295,7 @@ const Marketplace = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.8, ease: "easeOut" }}
                     whileHover={{ y: -5 }} // Subtle interactive float
-                    className="relative w-full min-h-[250px] md:min-h-[380px] mb-16 rounded-[48px] overflow-hidden bg-white/30 backdrop-blur-3xl border border-white/60 shadow-[0_20px_60px_-15px_rgba(100,50,255,0.1)] group"
+                    className="relative w-full min-h-[220px] md:min-h-[380px] mb-8 md:mb-16 rounded-[40px] md:rounded-[48px] overflow-hidden bg-white/30 backdrop-blur-3xl border border-white/60 shadow-[0_20px_60px_-15px_rgba(100,50,255,0.1)] group"
                 >
                     {/* Background Gradients & Flow */}
                     <div className="absolute inset-0 bg-gradient-to-br from-white/80 via-purple-50/20 to-blue-50/10 pointer-events-none" />
@@ -312,36 +304,25 @@ const Marketplace = () => {
                     <motion.div
                         animate={{ opacity: [0.4, 0.7, 0.4], scale: [1, 1.15, 1], x: [0, 20, 0], y: [0, -20, 0] }}
                         transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-                        className="absolute -top-[20%] -left-[10%] w-[550px] h-[550px] bg-purple-300/25 rounded-full blur-[130px] mix-blend-multiply"
+                        className="absolute -top-[20%] -left-[10%] w-[350px] md:w-[550px] h-[350px] md:h-[550px] bg-purple-300/25 rounded-full blur-[100px] md:blur-[130px] mix-blend-multiply"
                     />
                     <motion.div
                         animate={{ opacity: [0.3, 0.6, 0.3], scale: [1.1, 1, 1.1], x: [0, -30, 0] }}
                         transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
-                        className="absolute -bottom-[20%] -right-[10%] w-[650px] h-[650px] bg-blue-300/20 rounded-full blur-[130px] mix-blend-multiply"
+                        className="absolute -bottom-[20%] -right-[10%] w-[450px] md:w-[650px] h-[450px] md:h-[650px] bg-blue-300/20 rounded-full blur-[100px] md:blur-[130px] mix-blend-multiply"
                     />
 
-                    <div className="relative z-10 flex flex-col md:flex-row h-full items-center px-6 md:px-20 py-6 md:py-12 gap-8 md:gap-10">
+                    <div className="relative z-10 flex flex-col md:flex-row h-full items-center px-6 md:px-20 py-8 md:py-12 gap-8 md:gap-10">
                         {/* Left Content */}
-                        <div className="flex-1 space-y-6">
-                            <h1 className="text-4xl md:text-7xl font-black text-gray-900 tracking-tighter leading-[0.95] md:leading-[0.9] drop-shadow-sm">
+                        <div className="flex-1 space-y-4 md:space-y-6 text-center md:text-left">
+                            <h1 className="text-3xl sm:text-4xl md:text-7xl font-black text-gray-900 tracking-tighter leading-[1.1] md:leading-[0.9] drop-shadow-sm">
                                 <span className="block text-gray-900">AI-MALL</span>
                                 <span className="block text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-fuchsia-500 to-pink-500 saturate-[1.2]">MARKETPLACE</span>
                             </h1>
 
-                            <p className="text-lg text-gray-600 font-medium max-w-lg leading-relaxed">
+                            <p className="text-sm md:text-lg text-gray-600 font-medium max-w-lg leading-relaxed mx-auto md:mx-0">
                                 Deploy enterprise-grade autonomous agents directly into your workflow. The future of decentralized intelligence is here.
                             </p>
-
-                            {/* <div className="flex items-center gap-4 pt-4">
-                                <a
-                                    href="/dashboard/series"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="px-10 py-4 bg-gray-900 text-white rounded-full font-bold text-xs tracking-widest uppercase hover:bg-black transition-all shadow-[0_10px_30px_-10px_rgba(0,0,0,0.3)] hover:shadow-[0_20px_40px_-10px_rgba(124,58,237,0.4)] hover:scale-105 active:scale-95 flex items-center gap-2 group/btn border border-gray-800"
-                                >
-                                    Explore A-Series <ChevronRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform text-purple-300" />
-                                </a>
-                            </div> */}
                         </div>
 
                         {/* Right Content - Trending Vitals Card (Micro-animations) */}
@@ -400,9 +381,9 @@ const Marketplace = () => {
                 </motion.div>
 
                 {/* --- NAVIGATION SECTION --- */}
-                <div className="flex flex-col xl:flex-row items-center justify-between gap-6 mb-12 sticky top-4 z-40 bg-white/25 backdrop-blur-xl p-3 pr-4 pl-6 rounded-[30px] border border-white/50 shadow-[0_10px_30px_-5px_rgba(0,0,0,0.03)] selection:bg-purple-200">
-                    <div className="flex flex-col lg:flex-row items-center gap-6 w-full xl:w-auto">
-                        <h2 className="text-2xl font-black tracking-tight text-gray-900 whitespace-nowrap">
+                <div className="flex flex-col xl:flex-row items-center justify-between gap-6 mb-8 md:mb-12 sticky top-4 z-40 bg-white/25 backdrop-blur-xl p-3 md:pr-4 md:pl-6 rounded-[24px] md:rounded-[30px] border border-white/50 shadow-[0_10px_30px_-5px_rgba(0,0,0,0.03)] selection:bg-purple-200">
+                    <div className="flex flex-col lg:flex-row items-center gap-4 md:gap-6 w-full xl:w-auto">
+                        <h2 className="hidden md:block text-2xl font-black tracking-tight text-gray-900 whitespace-nowrap">
                             AI Agents
                         </h2>
 
@@ -420,14 +401,14 @@ const Marketplace = () => {
                         </div>
                     </div>
 
-                    <div className="flex overflow-x-auto md:flex-wrap justify-start md:justify-center xl:justify-end gap-3 flex-1 w-full md:w-auto no-scrollbar pb-2 md:pb-0 px-2">
+                    <div className="flex overflow-x-auto md:flex-wrap justify-start md:justify-center xl:justify-end gap-2 md:gap-3 flex-1 w-full md:w-auto no-scrollbar pb-2 md:pb-0 px-2 lg:px-0 scroll-smooth">
                         {categories.map((cat, i) => (
                             <button
                                 key={cat}
                                 onClick={() => setFilter(cat)}
-                                className={`px-5 py-2 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border whitespace-nowrap flex-shrink-0 ${filter === cat
+                                className={`px-5 md:px-6 py-2.5 md:py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border whitespace-nowrap flex-shrink-0 ${filter === cat
                                     ? 'bg-purple-600 text-white border-transparent shadow-lg shadow-purple-200/50 scale-105'
-                                    : 'bg-white/40 text-gray-500 border-white/30 hover:bg-white hover:text-purple-600 hover:shadow-md'
+                                    : 'bg-white/40 text-gray-500 border-white/30 hover:bg-white hover:text-purple-600 hover:shadow-md active:scale-95'
                                     }`}
                             >
                                 {cat}

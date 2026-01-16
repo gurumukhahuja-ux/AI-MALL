@@ -36,7 +36,7 @@ const HowItWorks = () => {
             {/* Background Blob for depth */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-blue-400/10 rounded-full blur-[100px] -z-10 pointer-events-none"></div>
 
-            <div className="container relative z-10">
+            <div className="max-w-7xl mx-auto px-6 md:px-12 xl:px-16 relative z-10">
                 <h2 className="text-3xl font-bold mb-12 text-[#1A1A1A] text-center">How It Works</h2>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -44,7 +44,7 @@ const HowItWorks = () => {
                         <div
                             key={step.id}
                             style={{ transitionDelay: `${index * 150}ms` }}
-                            className="step-card opacity-0 translate-y-12 group bg-white/30 backdrop-blur-xl border border-white/60 rounded-[30px] py-14 px-8 flex flex-col items-center text-center transition-all duration-700 ease-out shadow-[0_8px_30px_rgba(0,0,0,0.04)] hover:bg-white/50 hover:shadow-[0_20px_40px_-10px_rgba(168,85,247,0.15)] hover:-translate-y-2 cursor-pointer"
+                            className="step-card opacity-0 translate-y-12 group bg-white/30 backdrop-blur-xl border border-white/60 rounded-[30px] py-10 px-8 flex flex-col items-center text-center transition-all duration-700 ease-out shadow-[0_8px_30px_rgba(0,0,0,0.04)] hover:bg-white/50 hover:shadow-[0_20px_40px_-10px_rgba(168,85,247,0.15)] hover:-translate-y-2 cursor-pointer"
                         >
                             <div className="w-20 h-20 rounded-[24px] bg-gradient-to-br from-blue-50 to-purple-50 group-hover:from-blue-100 group-hover:to-purple-100 text-[#3B82F6] group-hover:text-[#8B5CF6] flex items-center justify-center mb-6 shadow-sm transition-colors duration-500">
                                 {step.icon}

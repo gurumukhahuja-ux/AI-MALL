@@ -4,16 +4,41 @@ import { getUserData } from "../userStore/userData";
 
 const API_BASE_URL = API;
 
+// Helper to safely set localStorage with quota handling
+const safeSetLocalStorage = (key, value) => {
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch (e) {
+    if (e.name === 'QuotaExceededError') {
+      console.warn("LocalStorage full. Clearing old chat data...");
+      // Clear old chat data to make space
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k?.startsWith("chat_")) keysToRemove.push(k);
+      }
+      keysToRemove.forEach(k => localStorage.removeItem(k));
+      // Try again
+      try {
+        localStorage.setItem(key, value);
+        return true;
+      } catch (e2) {
+        console.error("Still can't save to localStorage:", e2);
+        return false;
+      }
+    }
+    return false;
+  }
+};
+
 export const chatStorageService = {
 
   async getSessions() {
     try {
       const token = getUserData()?.token;
-      const response = await fetch(`${API_BASE_URL}/chat`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const response = await fetch(`${API_BASE_URL}/chat`, { headers });
       if (!response.ok) throw new Error("Backend failed");
       return await response.json();
     } catch (error) {
@@ -43,11 +68,8 @@ export const chatStorageService = {
 
     try {
       const token = getUserData()?.token;
-      const response = await fetch(`${API_BASE_URL}/chat/${sessionId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const response = await fetch(`${API_BASE_URL}/chat/${sessionId}`, { headers });
       if (response.status === 404) return [];
 
       if (!response.ok) throw new Error("Backend response not ok");
@@ -64,19 +86,17 @@ export const chatStorageService = {
   async saveMessage(sessionId, message, title) {
     try {
       const token = getUserData()?.token;
-      if (!token) throw new Error("No token available");
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
 
       const response = await axios.post(`${API_BASE_URL}/chat/${sessionId}/message`, { message, title }, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: headers
       });
 
       if (response.status !== 200) throw new Error("Backend save failed");
     } catch (error) {
-      console.error("Error saving message:", error);
+      console.warn("Backend save failed, using LocalStorage fallback:", error.message);
 
-      // --- LocalStorage fallback ---
+      // --- LocalStorage fallback with quota handling ---
       const historyKey = `chat_history_${sessionId}`;
       const metaKey = `chat_meta_${sessionId}`;
 
@@ -86,7 +106,7 @@ export const chatStorageService = {
       // Avoid duplicates
       if (!messages.find((m) => m.id === message.id)) {
         messages.push(message);
-        localStorage.setItem(historyKey, JSON.stringify(messages));
+        safeSetLocalStorage(historyKey, JSON.stringify(messages));
 
         const existingMeta = JSON.parse(localStorage.getItem(metaKey) || "{}");
 
@@ -95,7 +115,7 @@ export const chatStorageService = {
           lastModified: Date.now(),
         };
 
-        localStorage.setItem(metaKey, JSON.stringify(meta));
+        safeSetLocalStorage(metaKey, JSON.stringify(meta));
       }
     }
   },

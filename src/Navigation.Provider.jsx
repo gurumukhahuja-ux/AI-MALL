@@ -16,8 +16,9 @@ import Admin from './admin/Admin';
 // Vendor Auth imports removed
 import Invoices from './pages/Invoices';
 import Notifications from './pages/Notifications';
-import Profile from './pages/Profile';
+import UserProfile from './pages/UserProfile';
 import Series from './pages/Series';
+import AdminSupport from './pages/AdminSupport';
 
 import { AppRoute } from './types';
 import { Menu } from 'lucide-react';
@@ -26,6 +27,8 @@ import AiBase from './agents/AIBASE/AiBase.jsx';
 import ComingSoon from './Components/ComingSoon/ComingSoon.jsx';
 import ForgotPassword from './pages/ForgotPassword.jsx';
 import ResetPassword from './pages/ResetPassword.jsx';
+import VendorRegister from './pages/VendorRegister.jsx';
+import VendorLogin from './pages/VendorLogin.jsx';
 
 import { lazy, Suspense } from 'react';
 import ProtectedRoute from './Components/ProtectedRoute/ProtectedRoute.jsx';
@@ -77,23 +80,30 @@ const DashboardLayout = () => {
 
       <div className="flex-1 flex flex-col min-w-0 bg-transparent h-full relative overflow-hidden">
 
-        {/* Mobile Header - Glassy & Refined */}
-        <div className="md:hidden flex items-center justify-between p-6 bg-white/40 backdrop-blur-md border-b border-white/60 shrink-0 z-50 shadow-glass">
-          <div className="flex items-center gap-3">
+        {/* Mobile Header - High Fidelity Glassmorphism */}
+        <div className="md:hidden flex items-center justify-between px-6 py-4 bg-white/40 backdrop-blur-xl border-b border-white/60 shrink-0 z-50 sticky top-0 shadow-[0_4px_30px_rgba(0,0,0,0.03)]">
+          <div className="flex items-center gap-4">
             <button
               onClick={() => setIsSidebarOpen(true)}
-              className="p-2 -ml-2 rounded-lg hover:bg-surface text-maintext active:bg-surface/80 transition-colors"
+              className="p-2.5 -ml-2 rounded-2xl bg-white/50 hover:bg-white text-gray-900 active:scale-95 transition-all border border-white/80 shadow-sm"
             >
-              <Menu className="w-6 h-6" />
+              <Menu className="w-5 h-5" />
             </button>
-            <span className="font-bold text-lg text-primary uppercase tracking-tighter">AI MALL</span>
+            <div className="flex flex-col">
+              <span className="font-black text-lg text-gray-900 tracking-tighter leading-none">AI-MALL<span className="text-purple-600">.</span></span>
+              <span className="text-[8px] font-black text-gray-400 uppercase tracking-[0.3em]">Marketplace</span>
+            </div>
           </div>
 
           <Link
             to={AppRoute.PROFILE}
-            className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-sm uppercase hover:bg-primary/30 transition-colors"
+            className="w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-500 to-blue-500 p-[2px] shadow-lg shadow-purple-500/20 active:scale-95 transition-all"
           >
-            {user.name?.charAt(0) || 'U'}
+            <div className="w-full h-full bg-white rounded-[14px] flex items-center justify-center">
+              <span className="font-black text-sm text-transparent bg-clip-text bg-gradient-to-br from-purple-600 to-blue-600">
+                {user.name?.charAt(0) || 'U'}
+              </span>
+            </div>
           </Link>
         </div>
 
@@ -131,7 +141,8 @@ const NavigateProvider = () => {
         <Route path={AppRoute.LOGIN} element={<Login />} />
         <Route path={AppRoute.SIGNUP} element={<Signup />} />
         <Route path={AppRoute.SERIES} element={<Series />} />
-// Vendor Register/Login routes removed per request
+        <Route path="/vendor-register" element={<VendorRegister />} />
+        <Route path="/vendor-login" element={<VendorLogin />} />
         <Route path={AppRoute.E_Verification} element={<VerificationForm />} />
         <Route path={AppRoute.FORGOT_PASSWORD} element={<ForgotPassword />} />
         <Route path={AppRoute.RESET_PASSWORD} element={<ResetPassword />} />
@@ -149,6 +160,7 @@ const NavigateProvider = () => {
           <Route path="chat/:sessionId" element={<Chat />} />
           <Route path="overview" element={<ProtectedRoute><DashboardOverview /></ProtectedRoute>} />
           <Route path="marketplace" element={<Marketplace />} />
+          <Route path="admin-support" element={<ProtectedRoute><AdminSupport /></ProtectedRoute>} />
           {/* <Route path="live-demos" element={
             <Suspense fallback={<div className="flex items-center justify-center h-full"><p className="text-subtext">Loading...</p></div>}>
               <LiveDemoPage />
@@ -160,7 +172,7 @@ const NavigateProvider = () => {
           <Route path="settings" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
           <Route path="invoices" element={<ProtectedRoute><Invoices /></ProtectedRoute>} />
           <Route path="notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
-          <Route path="profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+          <Route path="profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
 
           <Route path="security" element={
             <Suspense fallback={<div className="flex items-center justify-center h-full">Loading...</div>}>
