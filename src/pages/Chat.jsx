@@ -1104,7 +1104,8 @@ const Chat = () => {
       // Optimized history
       const chatHistory = [...messages, userMsg].map(m => ({
         role: m.role,
-        content: m.content
+        content: m.content,
+        attachment: m.attachment // Include attachments for Visual Context Memory
       }));
 
       console.log("🚀 Processing:", {
