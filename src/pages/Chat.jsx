@@ -830,6 +830,7 @@ const Chat = () => {
     // Stop any ongoing speech
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
+      setIsAiSpeaking(false);
     }
 
     setShowLiveAI(false);
@@ -876,6 +877,7 @@ const Chat = () => {
     // Always stop any ongoing speech when interaction starts/toggles
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
+      setIsAiSpeaking(false);
     }
 
     // Toggle Logic: If already listening/processing, stop everything
