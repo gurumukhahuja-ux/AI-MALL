@@ -68,7 +68,7 @@ export const AppRoute = {
 
 // Use environment variable for API URL (configured in .env file)
 // export const API = "https://ai-mall-backend.onrender.com/api";
-export const API = "http://localhost:5000/api";
+export const API = "http://localhost:8080/api";
 
 export const apis = {
   emailVerificationApi: `${API}/email_varification`,
@@ -87,5 +87,5 @@ export const apis = {
   aibiz: `${API}/aibiz`,
   support: `${API}/support`,
   generateImage: `${API}/image/generate`,
-  BASE_URL: "http://localhost:5000",
+  BASE_URL: "http://localhost:8080",
 };

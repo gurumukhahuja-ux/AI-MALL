@@ -37,12 +37,14 @@ export const chatStorageService = {
   async getSessions() {
     try {
       const token = getUserData()?.token;
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      if (!token) throw new Error("No token, using local storage");
+
+      const headers = { 'Authorization': `Bearer ${token}` };
       const response = await fetch(`${API_BASE_URL}/chat`, { headers });
       if (!response.ok) throw new Error("Backend failed");
       return await response.json();
     } catch (error) {
-      console.warn("Backend unavailable. Using LocalStorage fallback.");
+      // console.warn("Backend unavailable or Guest mode. Using LocalStorage fallback.");
       const sessions = [];
 
       for (let i = 0; i < localStorage.length; i++) {
@@ -68,7 +70,9 @@ export const chatStorageService = {
 
     try {
       const token = getUserData()?.token;
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      if (!token) throw new Error("No token, using local storage");
+
+      const headers = { 'Authorization': `Bearer ${token}` };
       const response = await fetch(`${API_BASE_URL}/chat/${sessionId}`, { headers });
       if (response.status === 404) return [];
 
@@ -77,7 +81,7 @@ export const chatStorageService = {
       const data = await response.json();
       return data.messages || [];
     } catch (error) {
-      console.error("Error fetching history:", error);
+      // console.warn("Using LocalStorage for history:", error.message);
       const local = localStorage.getItem(`chat_history_${sessionId}`);
       return local ? JSON.parse(local) : [];
     }
@@ -86,7 +90,11 @@ export const chatStorageService = {
   async saveMessage(sessionId, message, title) {
     try {
       const token = getUserData()?.token;
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+      // If guest, skip backend save immediately
+      if (!token) throw new Error("Guest user - saving to local only");
+
+      const headers = { 'Authorization': `Bearer ${token}` };
 
       const response = await axios.post(`${API_BASE_URL}/chat/${sessionId}/message`, { message, title }, {
         headers: headers
@@ -94,7 +102,7 @@ export const chatStorageService = {
 
       if (response.status !== 200) throw new Error("Backend save failed");
     } catch (error) {
-      console.warn("Backend save failed, using LocalStorage fallback:", error.message);
+      // console.warn("Backend save skipped/failed, using LocalStorage:", error.message);
 
       // --- LocalStorage fallback with quota handling ---
       const historyKey = `chat_history_${sessionId}`;
